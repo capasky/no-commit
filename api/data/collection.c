@@ -23,7 +23,8 @@
 #include "collection.h"
 #include "dbapi.h"
 
-#include "../utils.h"
+#include "../utils/stringutils.h"
+#include "../utils/convert.h"
 
 /**
  * CollectionCreate create a collection
@@ -58,9 +59,9 @@ int Collection_Dispose ( Collection * container )
 	{
 		container->errorCode = closeDB ( container->db );
 	}
+	deleteDB ( container->db );
 	free ( container->dbFile );
 	free ( container );
-	deleteDB ( container->db );
 	return DB_OK;
 }
 
@@ -151,7 +152,7 @@ int Collection_AddInt ( Collection * container, int key, char * value )
 {
     int ecode;
 
-	if ( !tchdbput2 (( TCHDB * ) container->db, IntToString ( key ) , value ))
+	if ( !tchdbput2 (( TCHDB * ) container->db, Convert_IntToString ( key ) , value ))
 	{
 		ecode = tchdbecode (( TCHDB * ) container->db );
 		fprintf ( stderr, "put error:%s\n", tchdberrmsg ( ecode ));
@@ -169,7 +170,7 @@ char * Collection_GetInt ( Collection * container, int key )
     char*   value;
 	int     ecode;
 
-	value = tchdbget2 (( TCHDB *) container->db, IntToString ( key ));
+	value = tchdbget2 (( TCHDB *) container->db, Convert_IntToString ( key ));
 
 	if ( !value )
 	{
@@ -186,7 +187,7 @@ char * Collection_GetInt ( Collection * container, int key )
  */
 int Collection_RemoveInt ( Collection * container, int key )
 {
-    if ( !tchdbout2 ( container->db, IntToString ( key )))
+    if ( !tchdbout2 ( container->db, Convert_IntToString ( key )))
     {
         return 0;
     }
@@ -199,7 +200,7 @@ int Collection_RemoveInt ( Collection * container, int key )
  */
 int Collection_ContainsInt ( Collection * container, int key )
 {
-    if ( Collection_GetStr ( container, IntToString ( key )) != NULL )
+    if ( Collection_GetStr ( container, Convert_IntToString ( key )) != NULL )
     {
         return 1;
     }

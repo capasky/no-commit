@@ -12,24 +12,24 @@
 
 /**
  * Revision Log:
- * @author				@date				@version
- * capasky				2012.12.01			1.0.0.1
+ * @author              @date               @version
+ * capasky              2012.12.01          1.0.0.1
  */
- 
+
 #ifndef COLLECTION_H_INCLUDED
 #define COLLECTION_H_INCLUDED
 
-#define DB_OK				0
-#define DB_ERR				-1
-#define DB_CANCEL			1
+#define DB_OK               0
+#define DB_ERR              -1
+#define DB_CANCEL           1
 
-#define DB_STATE_OPEN	 	1
-#define DB_STATE_CLOSE	 	0
+#define DB_STATE_OPEN       1
+#define DB_STATE_CLOSE      0
 
 typedef void (*Function) ( char *, char * );
 
 /**
- * Definition of Collection struct
+ * Collection结构体的定义
  * @author capasky
  * @version 1.0.1
  */
@@ -133,7 +133,7 @@ int Collection_ContainsInt(Collection * container, int key);
  * Collection_Iterator iterate all items in collection with a function
  * @param container Collection struct
  * @param function a function pointer to process each item in the
- * 			collection
+ *          collection
  * @return void
  */
 void Collection_Iterator(Collection * container, Function function);
