@@ -14,6 +14,7 @@
  * Revision Log:
  * @author				@date				@version
  * capasky				2012.12.01			1.0.0.1
+ * yellhb				2012.12.14			1.0.1.0
  */
 
 #include <stdlib.h>
@@ -30,21 +31,19 @@ char * Convert_IntToString(int num)
 	int 	tmp, k, i;
 	
 	tmp = num;
-	k = 0;
-	while ( tmp != 0 )
-	{
+	k = 1;
+	while (( tmp /= 10 ) != 0 )
 		k++;
-		tmp /= 10;
-	}
 
 	arr = ( char *) malloc ( sizeof ( char ) * ( k + 1 ));
-	
+	arr[0] = '0';
+
 	i = 0;
 	while ( num != 0 )
 	{
 		arr[k - i - 1] = num % 10 + 48;
-		i++;
 		num /= 10;
+		i++;
 	}
 
 	arr[k] = '\0';
