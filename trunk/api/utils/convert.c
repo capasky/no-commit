@@ -15,7 +15,8 @@
  * @author				@date				@version
  * capasky				2012.12.01			1.0.0.1
  */
- 
+
+#include <stdlib.h>
 #include "convert.h"
 
 /**

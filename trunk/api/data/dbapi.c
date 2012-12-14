@@ -19,6 +19,9 @@
 #include <tcutil.h>
 #include <tchdb.h>
 
+#include "../utils/stringutils.h"
+#include "../utils/convert.h"
+
 /**
  * Create new Database instance
  */
@@ -57,7 +60,7 @@ int insertKV ( void *pdb, int key, char *value )
 {
 	int ecode;
 
-	if ( !tchdbput2 (( TCHDB * ) pdb, itochar ( key ), value ))
+	if ( !tchdbput2 (( TCHDB * ) pdb, Convert_IntToString ( key ), value ))
 	{
 		ecode = tchdbecode (( TCHDB * ) pdb );
 		fprintf ( stderr, "put error:%s\n", tchdberrmsg ( ecode ));
@@ -74,7 +77,7 @@ char * getKV ( void *pdb, int key )
 {
 	char* value;
 	int ecode;
-	value = tchdbget2 (( TCHDB *) pdb, itochar ( key ));
+	value = tchdbget2 (( TCHDB *) pdb, Convert_IntToString ( key ));
 	if ( !value )
 	{
 		ecode = tchdbecode (( TCHDB *) pdb );

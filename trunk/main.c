@@ -39,7 +39,7 @@ int main ( int argc, char **argv )
 	int cmp = -1;
 	Collection * wow = NULL;
 	
-	printf("nono>>");
+	printf("nocommit>>");
 	gets(cmd);
 	
 	while ( strcmp( cmd, CMD_QUIT ) != 0 )
@@ -69,17 +69,18 @@ int main ( int argc, char **argv )
 			}
 			break;
 		case 'c':
-			cmp = strncmp(cmd, CMD_CLOSE, sizeof(CMD_CLOSE) - 1);
-			if (cmp == 0)
+			cmp = strncmp(cmd, CMD_CLOSE, sizeof(CMD_CLOSE) - 1);			
+			if ( cmp == 0 )
 			{
 				if ( wow != NULL )
 				{
 					Collection_Dispose(wow);
+					wow = NULL;
 					printf("OK\n");
 				}
 				else
 				{
-					printf("Please open or create a database file first!");
+					printf("Please open or create a database file first!\n");
 				}
 			}
 			else
@@ -104,7 +105,7 @@ int main ( int argc, char **argv )
 				}
 				else
 				{
-					printf("Please open or create a database file first!");
+					printf("Please open or create a database file first!\n");
 				}
 			}
 			else
@@ -126,7 +127,7 @@ int main ( int argc, char **argv )
 				}
 				else
 				{
-					printf("Please open or create a database file first!");
+					printf("Please open or create a database file first!\n");
 				}
 			}
 			else
@@ -148,7 +149,7 @@ int main ( int argc, char **argv )
 				}
 				else
 				{
-					printf("Please open or create a database file first!");
+					printf("Please open or create a database file first!\n");
 				}
 			}
 			else
@@ -164,11 +165,11 @@ int main ( int argc, char **argv )
 		fflush( stdin );
 		if (wow == NULL)
 		{
-			printf("nono>>");
+			printf("nocommit>>");
 		}
 		else
 		{
-			printf("nono::%s>>", wow->dbFile);	
+			printf("nocommit::%s>>", wow->dbFile);	
 		}		
 		gets(cmd);
 	}
