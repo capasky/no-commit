@@ -22,25 +22,12 @@
 
 #include "api/inet/TCPClient.h"
 #include "api/inet/protocol.h"
+#include "api/inet/inetdef.h"
+
+#include "cmddef.h"
 
 #define IP_ADDR_SERVER  "192.168.1.102"
 #define IP_PORT_SERVER  8888
-
-#define CMD_MAX_LEN     	64
-#define CMD_OPEN_ID        	1
-#define CMD_CLOSE_ID       	2
-#define CMD_GET_ID         	3
-#define CMD_SET_ID         	4
-#define CMD_DEL_ID         	5
-#define CMD_QUIT_ID        	6
-
-#define CMD_OPEN        	"open"
-#define CMD_CLOSE       	"close"
-#define CMD_GET         	"get"
-#define CMD_SET         	"set"
-#define CMD_DEL         	"delete"
-#define CMD_QUIT        	"quit"
-#define CMD_RE          	"open|close|get|set|delete\s([a-z][A-Z])+\s\w+"
 
 int main ( int argc, char **argv )
 {
@@ -50,20 +37,14 @@ int main ( int argc, char **argv )
     int 			cmp = -1;
     bool 			result = false;
     char 			buffer[1024];
+    char *			dbFile;
     TCPClient * 	tcpClient;
 
     NCProtocol * 	ncp;
     NCData * 		ncData[2];
+
+    printf("NoCommit>>");
     
-    tcpClient = TCPClient_Create(IP_ADDR_SERVER, IP_PORT_SERVER);
-    result = TCPClient_Connect(tcpClient, IP_ADDR_SERVER, IP_PORT_SERVER);
-    if (!result)
-	{
-		fprintf(stderr, "TCP连接出错，错误代码：%d", errno);
-		return ( EXIT_FAILURE );
-	}
-	printf("Connect to server %s successful!\n", tcpClient->IPAddress);
-    printf("%s>>", tcpClient->IPAddress);
     gets(cmd);
 
     while ( strcmp( cmd, CMD_QUIT ) != 0 )
@@ -74,11 +55,21 @@ int main ( int argc, char **argv )
             cmp = strncmp(cmd, CMD_OPEN, sizeof(CMD_OPEN) - 1);
             if ( cmp == 0 )
             {
-                if (wow == NULL )
+                if (tcpClient != NULL )
                 {
                     key = strchr(cmd, ' ');
                     *key = '\0';
                     key++;
+                    dbFile = strdup(key);
+                        
+					tcpClient = TCPClient_Create(IP_ADDR_SERVER, IP_PORT_SERVER);
+					result = TCPClient_Connect(tcpClient, IP_ADDR_SERVER, IP_PORT_SERVER);
+					if (!result)
+					{
+						fprintf(stderr, "TCP连接出错，错误代码：%d", result);
+						return ( EXIT_FAILURE );
+					}
+					printf("已连接到服务器 %s !\n", tcpClient->IPAddress);
                     ncData[0] = NCData_Create(strlen(key), key);
                     ncp = NCProtocol_Create(
 								CMD_OPEN_ID,
@@ -90,28 +81,32 @@ int main ( int argc, char **argv )
 					TCPClient_Receive(tcpClient,
 								buffer,
 								sizeof(buffer));
+					NCProtocol_Dispose(ncp);
 					
                     printf("服务器：%s\n", buffer);
                 }
                 else
                 {
-                    printf("文件 \"%s\" 已经打开!\n", wow->dbFile);
+                    printf("文件 \"%s\" 已经打开!\n", dbFile);
                 }
             }
             else
             {
-                printf("Can't find command \"%s\"\n", cmd);
+                printf("没有此命令： \"%s\"\n", cmd);
             }
             break;
         case 'c':
             cmp = strncmp(cmd, CMD_CLOSE, sizeof(CMD_CLOSE) - 1);
             if ( cmp == 0 )
             {
-                if ( wow != NULL )
+                if ( tcpClient != NULL )
                 {
-                    Collection_Dispose(wow);
-                    wow = NULL;
-                    printf("OK\n");
+					if (TCPClient_Close(tcpClient))
+					{
+						printf("已关闭与服务器的连接");
+					}
+					free(tcpClient);
+					tcpClient = NULL;
                 }
                 else
                 {
@@ -120,14 +115,14 @@ int main ( int argc, char **argv )
             }
             else
             {
-                printf("Can't find command \"%s\"\n", cmd);
+                printf("没有此命令： \"%s\"\n", cmd);
             }
             break;
         case 's':
             cmp = strncmp(cmd, CMD_SET, sizeof(CMD_SET) - 1);
             if ( cmp == 0 )
             {
-                if ( wow != NULL )
+                if ( tcpClient != NULL )
                 {
                     key = strchr(cmd, ' ');
                     *key = '\0';
@@ -135,7 +130,21 @@ int main ( int argc, char **argv )
                     value = strchr(key, ' ');
                     *value = '\0';
                     value++;
-                    Collection_AddStr(wow, key, value);
+                    
+                    ncData[0] = NCData_Create(strlen(key), key);
+                    ncData[1] = NCData_Create(strlen(value), value);
+                    
+                    ncp = NCProtocol_Create(
+								CMD_SET_ID,
+								2,
+								ncData);
+					TCPClient_Send(tcpClient,
+								NCProtocol_Encapsul(ncp),
+								ncp->totalLength);
+					TCPClient_Receive(tcpClient,
+								buffer,
+								sizeof(buffer));
+					NCProtocol_Dispose(ncp);
                     printf("OK\n");
                 }
                 else
@@ -145,20 +154,32 @@ int main ( int argc, char **argv )
             }
             else
             {
-                printf("Can't find command \"%s\"\n", cmd);
+                printf("没有此命令： \"%s\"\n", cmd);
             }
             break;
         case 'g':
             cmp = strncmp(cmd, CMD_GET, sizeof(CMD_GET) - 1);
             if ( cmp == 0 )
             {
-                if ( wow != NULL )
+                if ( tcpClient != NULL )
                 {
                     key = strchr(cmd, ' ');
                     *key = '\0';
                     key++;
-                    printf("{%s : %s}\n", key, Collection_GetStr(wow, key));
-                    printf("OK\n");
+                    ncData[0] = NCData_Create(strlen(key), key);
+                    ncp = NCProtocol_Create(
+								CMD_GET_ID,
+								1,
+								ncData);
+					TCPClient_Send(tcpClient,
+								NCProtocol_Encapsul(ncp),
+								ncp->totalLength);
+					TCPClient_Receive(tcpClient,
+								buffer,
+								sizeof(buffer));
+					NCProtocol_Dispose(ncp);
+					
+                    printf("服务器：%s\n", buffer);
                 }
                 else
                 {
@@ -167,20 +188,34 @@ int main ( int argc, char **argv )
             }
             else
             {
-                printf("Can't find command \"%s\"\n", cmd);
+                printf("没有此命令： \"%s\"\n", cmd);
             }
             break;
         case 'd':
             cmp = strncmp(cmd, CMD_DEL, sizeof(CMD_DEL) - 1);
             if ( cmp == 0 )
             {
-                if ( cmp == 0 && wow != NULL )
+                if ( cmp == 0 && tcpClient != NULL )
                 {
                     key = strchr(cmd, ' ');
                     *key = '\0';
                     key++;
-                    Collection_RemoveStr(wow, key);
-                    printf("OK\n");
+                    
+                    ncData[0] = NCData_Create(strlen(key), key);
+                    
+                    ncp = NCProtocol_Create(
+								CMD_DEL_ID,
+								1,
+								ncData);
+					TCPClient_Send(tcpClient,
+								NCProtocol_Encapsul(ncp),
+								ncp->totalLength);
+					TCPClient_Receive(tcpClient,
+								buffer,
+								sizeof(buffer));
+					NCProtocol_Dispose(ncp);
+					
+                    printf("服务器：%s\n", buffer);
                 }
                 else
                 {
@@ -189,22 +224,22 @@ int main ( int argc, char **argv )
             }
             else
             {
-                printf("Can't find command \"%s\"\n", cmd);
+                printf("没有此命令： \"%s\"\n", cmd);
             }
             break;
         default:
-            printf("Can't find command \"%s\"\n", cmd);
+            printf("没有此命令： \"%s\"\n", cmd);
             break;
         }
 
         fflush( stdin );
-        if (wow == NULL)
+        if (tcpClient == NULL)
         {
             printf("nocommit>>");
         }
         else
         {
-            printf("nocommit::%s>>", wow->dbFile);
+            printf("nocommit::%s::%s>>", tcpClient->IPAddress, dbFile);
         }
         gets(cmd);
     }
