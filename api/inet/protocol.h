@@ -19,7 +19,7 @@
 #ifndef PROTOCOL_H_INCLUDE
 #define PROTOCOL_H_INCLUDE
 
-#include "inetdef.h"
+#define DATA_MAX_LEN 1024
 
 /**
  * NCData 结构体的定义
@@ -28,7 +28,7 @@
  */
 typedef struct sNCData
 {
-    int     legth;
+    int     length;
     char *  data;
 } NCData;
 
@@ -37,26 +37,47 @@ typedef struct sNCData
  * @author capasky
  * @version 1.0.0.1
  */
-typedef struct sNoCommit
+typedef struct sNCProtocol
 {
-    char            command[2];
-    unsigned short  totalLength;
+    int             command;
+    int             totalLength;
     int             chunkCount;
-    NCData *        dataChunk;
+    NCData **       dataChunk;
 } NCProtocol;
+
+/**
+ * NCData_Create 创建一个 NCData 结构体对象
+ * @param length 数据长度
+ * @param data 数据
+ * @return 成功则返回封装后的数据指针，否则返回NULL
+ */
+NCData * NCData_Create(int length, char * data);
+
+/**
+ * NCProtocol_Create 创建一个 NCProtocol 结构体对象
+ * @param command 命令标识
+ * @param totalLength 协议数据总长度
+ * @param chunkCount 数据块数
+ * @param dataChunk 数据块
+ * @return 成功则返回封装后的数据指针，否则返回NULL
+ */
+NCProtocol * NCProtocol_Create( int         command,
+                                int         chunkCount,
+                                NCData **   dataChunk
+                                );
 
 /**
  * NCProtocol_Parse 将数据解析为协议结构对象
  * @param data 数据指针
  * @param length 数据的长度
- * @return 成功则返回解析的 NCProtocol 结构体对象指针，否则返回 NULL
+ * @return 成功则返回解析的 NCProtocol 结构体对象指针，否则返回NULL
  */
-NCProtocol * NCProtocol_Parse(char * data, int length);
+NCProtocol * NCProtocol_Parse(char * data);
 
 /**
  * NCProtocol_Encapsul 将协议结构体对象封装为数据
  * @param ncp 协议结构体对象指针
- * @return 成功则返回封装后的数据指针，否则返回 NULL
+ * @return 成功则返回封装后的数据指针，否则返回NULL
  */
 char * NCProtocol_Encapsul(NCProtocol * ncp);
 

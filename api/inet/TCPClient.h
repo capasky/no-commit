@@ -34,10 +34,11 @@ typedef struct sTCPClient
     int     Available;              /* 已经从网络接收且可供读取的数据量。 */
     char    IPAddress[INET_IPADDR_STRING_LEN];       /* IP Address */
     socket  Client;                 /* 基础 Socket。 */
+    int     Port;                   /* 端口号 */
     bool    Connected;              /* Socket 是否已连接到远程主机。 */
     int     ReceiveBufferSize;      /* 接收缓冲区的大小。 */
     int     ReceiveTimeout;         /* TcpClient 等待接收数据的时间量。 */
-    int     SendBufferSize;         /* 送缓冲区的大小。 */
+    int     SendBufferSize;         /* 发送缓冲区的大小。 */
     int     SendTimeout;            /* TcpClient 等待发送操作成功完成的时间量。 */
 
 } TCPClient;
@@ -57,7 +58,7 @@ TCPClient * TCPClient_Create(char * ipAddress, int port);
  * @param port The port number to which you intend to connect.
  * @return 1 if success; or 0 if fail
  */
-int TCPClient_Connect(TCPClient * client, char * ipAddress, int port);
+bool TCPClient_Connect(TCPClient * client, char * ipAddress, int port);
 
 /**
  * TCPClient_异步的连接

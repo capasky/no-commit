@@ -28,9 +28,10 @@
  */
 typedef struct sTCPListener
 {
-    bool        Active          /* 是否正主动侦听客户端连接。*/
-    char *      LocalEndpoint   /* 当前 TcpListener 的基础 EndPoint。 */
-    socket      Server          /* 基础网络 Socket。 */
+    bool        Active;         /* 是否正主动侦听客户端连接。*/
+    char        IPAddress[INET_IPADDR_STRING_LEN]; 		/* 当前 TcpListener 的IP地址 */
+    socket      Server;         /* 基础网络 Socket。 */
+    int         Port;           /* 端口号 */
 } TCPListener;
 
 /**

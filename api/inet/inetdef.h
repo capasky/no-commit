@@ -17,13 +17,14 @@
 #ifndef INETDEF_H_INCLUDE
 #define INETDEF_H_INCLUDE
 
-#define INET_IPADDR_STRING_LEN 16
+#define INET_IPADDR_STRING_LEN 		16
+#define INET_PORT_VOID				0
 
 typedef int socket;
 
 typedef unsigned short bool;
 
-#define true 1
-#define false 0
+#define true        1
+#define false       0
 
 #endif
