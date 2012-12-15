@@ -33,7 +33,7 @@ typedef struct sTCPClient
     bool    Active;                 /* 是否已建立连接。 */
     int     Available;              /* 已经从网络接收且可供读取的数据量。 */
     char    IPAddress[INET_IPADDR_STRING_LEN];       /* IP Address */
-    socket  Client;                 /* 基础 Socket。 */
+    SOCKET  Client;                 /* 基础 Socket。 */
     int     Port;                   /* 端口号 */
     bool    Connected;              /* Socket 是否已连接到远程主机。 */
     int     ReceiveBufferSize;      /* 接收缓冲区的大小。 */
