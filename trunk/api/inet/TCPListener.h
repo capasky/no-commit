@@ -30,7 +30,7 @@ typedef struct sTCPListener
 {
     bool        Active;         /* 是否正主动侦听客户端连接。*/
     char        IPAddress[INET_IPADDR_STRING_LEN]; 		/* 当前 TcpListener 的IP地址 */
-    socket      Server;         /* 基础网络 Socket。 */
+    SOCKET      Server;         /* 基础网络 Socket。 */
     int         Port;           /* 端口号 */
 } TCPListener;
 
@@ -47,7 +47,7 @@ TCPListener * TCPListener_Create(char * ipAddress, int port);
  * @param listener TCPListener结构体对象指针。
  * @return 成功则返回创建的与客户端通信的SOCKET，否则返回空的SOCKET。
  */
-socket TCPListener_Accept(TCPListener * listener);
+SOCKET TCPListener_Accept(TCPListener * listener);
 
 /**
  * TCPListener_Start 启动对具有最大挂起连接数的传入连接请求的侦听。
