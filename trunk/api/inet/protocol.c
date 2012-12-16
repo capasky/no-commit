@@ -45,6 +45,27 @@ NCData * NCData_Create(int length, char * data)
 }
 
 /**
+ * NCData_Dispose 处理NCData，释放其所占内存
+ * @param ncd 数据块结构体对象指针
+ * @return 成功返回true，否则返回false。
+ */
+bool NCData_Dispose(NCData * ncd)
+{
+	if (ncd == NULL)
+	{
+		return false;
+	}
+	if (ncd->data != NULL)
+	{
+		printf("%s", ncd->data);
+		free(ncd->data);
+	}
+	free(ncd);
+	
+	return true;
+}
+
+/**
  * NCProtocol_Create 创建一个 NCProtocol 结构体对象
  * @param command 命令标识
  * @param totalLength 协议数据总长度
@@ -77,6 +98,36 @@ NCProtocol * NCProtocol_Create( int         command,
     ncp->dataChunk = dataChunk;
 
     return ncp;
+}
+
+/**
+ * NCProtocol_Dispose 处理NCProtocol，释放其所占内存
+ * @param ncp 协议结构体对象指针
+ * @return 成功返回true，否则返回false。
+ */
+bool NCProtocol_Dispose(NCProtocol * ncp)
+{
+	int i;
+	if (ncp == NULL)
+	{
+		return false;
+	}
+	else
+	{
+		printf("OK\n");
+		for (i = 0; i < ncp->chunkCount; i++)
+		{
+			if (ncp->dataChunk[i] != NULL)
+			{
+				if(!NCData_Dispose(ncp->dataChunk[i]))
+				{
+					return false;
+				}
+			}
+		}
+		free(ncp);
+	}
+	return true;
 }
 
 /**

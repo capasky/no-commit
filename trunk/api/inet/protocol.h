@@ -14,6 +14,7 @@
  * Revision Log:
  * @author              @date               @version
  * capasky              2012.12.13          1.0.0.1
+ * capasky				2012.12.15			1.0.1.0
  */
 
 #ifndef PROTOCOL_H_INCLUDE
@@ -54,6 +55,12 @@ typedef struct sNCProtocol
 NCData * NCData_Create(int length, char * data);
 
 /**
+ * NCData_Dispose 处理NCData，释放其所占内存
+ * @param ncd 数据块结构体对象指针
+ * @return 成功返回true，否则返回false。
+ */
+bool NCData_Dispose(NCData * ncd);
+/**
  * NCProtocol_Create 创建一个 NCProtocol 结构体对象
  * @param command 命令标识
  * @param totalLength 协议数据总长度
@@ -63,8 +70,14 @@ NCData * NCData_Create(int length, char * data);
  */
 NCProtocol * NCProtocol_Create( int         command,
                                 int         chunkCount,
-                                NCData **   dataChunk
-                                );
+                                NCData **   dataChunk);
+
+/**
+ * NCProtocol_Dispose 处理NCProtocol，释放其所占内存
+ * @param ncp 协议结构体对象指针
+ * @return 成功返回true，否则返回false。
+ */
+bool NCProtocol_Dispose(NCProtocol * ncp);
 
 /**
  * NCProtocol_Parse 将数据解析为协议结构对象

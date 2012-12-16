@@ -26,8 +26,8 @@
 
 #include "cmddef.h"
 
-#define IP_ADDR_SERVER  "192.168.1.102"
-#define IP_PORT_SERVER  8888
+#define IP_ADDR_SERVER  "192.168.130.194"
+#define IP_PORT_SERVER  5000
 
 int main ( int argc, char **argv )
 {
@@ -61,29 +61,32 @@ int main ( int argc, char **argv )
                     *key = '\0';
                     key++;
                     dbFile = strdup(key);
-                        
-					tcpClient = TCPClient_Create(IP_ADDR_SERVER, IP_PORT_SERVER);
+
+					tcpClient = TCPClient_Create("192.168.130.51", 0);
 					result = TCPClient_Connect(tcpClient, IP_ADDR_SERVER, IP_PORT_SERVER);
 					if (!result)
 					{
-						fprintf(stderr, "TCP连接出错，错误代码：%d", result);
+						fprintf(stderr, "TCP连接出错，错误代码：%d\n", result);
 						return ( EXIT_FAILURE );
 					}
-					printf("已连接到服务器 %s !\n", tcpClient->IPAddress);
-                    ncData[0] = NCData_Create(strlen(key), key);
-                    ncp = NCProtocol_Create(
-								CMD_OPEN_ID,
-								1,
-								ncData);
-					TCPClient_Send(tcpClient,
-								NCProtocol_Encapsul(ncp),
-								ncp->totalLength);
-					TCPClient_Receive(tcpClient,
-								buffer,
-								sizeof(buffer));
-					NCProtocol_Dispose(ncp);
-					
-                    printf("服务器：%s\n", buffer);
+					else
+					{
+						printf("已连接到服务器 %s !\n", tcpClient->IPAddress);
+						ncData[0] = NCData_Create(strlen(key), key);
+						ncp = NCProtocol_Create(
+									CMD_OPEN_ID,
+									1,
+									ncData);
+						TCPClient_Send(tcpClient,
+									NCProtocol_Encapsul(ncp),
+									ncp->totalLength);
+						TCPClient_Receive(tcpClient,
+									buffer,
+									sizeof(buffer));
+						//NCProtocol_Dispose(ncp);
+						
+						printf("服务器：%s\n", buffer);
+					}
                 }
                 else
                 {
@@ -101,6 +104,7 @@ int main ( int argc, char **argv )
             {
                 if ( tcpClient != NULL )
                 {
+					result = TCPClient_Connect(tcpClient, IP_ADDR_SERVER, IP_PORT_SERVER);
 					if (TCPClient_Close(tcpClient))
 					{
 						printf("已关闭与服务器的连接");
@@ -110,7 +114,7 @@ int main ( int argc, char **argv )
                 }
                 else
                 {
-                    printf("Please open or create a database file first!\n");
+                    printf("请先与服务器建立连接!\n");
                 }
             }
             else
@@ -124,6 +128,7 @@ int main ( int argc, char **argv )
             {
                 if ( tcpClient != NULL )
                 {
+					result = TCPClient_Connect(tcpClient, IP_ADDR_SERVER, IP_PORT_SERVER);
                     key = strchr(cmd, ' ');
                     *key = '\0';
                     key++;
@@ -144,12 +149,13 @@ int main ( int argc, char **argv )
 					TCPClient_Receive(tcpClient,
 								buffer,
 								sizeof(buffer));
-					NCProtocol_Dispose(ncp);
-                    printf("OK\n");
+					//NCProtocol_Dispose(ncp);
+					
+					printf("服务器：%s\n", buffer);
                 }
                 else
                 {
-                    printf("Please open or create a database file first!\n");
+                    printf("先与服务器建立连接!\n");
                 }
             }
             else
@@ -163,6 +169,7 @@ int main ( int argc, char **argv )
             {
                 if ( tcpClient != NULL )
                 {
+					result = TCPClient_Connect(tcpClient, IP_ADDR_SERVER, IP_PORT_SERVER);
                     key = strchr(cmd, ' ');
                     *key = '\0';
                     key++;
@@ -177,13 +184,13 @@ int main ( int argc, char **argv )
 					TCPClient_Receive(tcpClient,
 								buffer,
 								sizeof(buffer));
-					NCProtocol_Dispose(ncp);
+					//NCProtocol_Dispose(ncp);
 					
                     printf("服务器：%s\n", buffer);
                 }
                 else
                 {
-                    printf("Please open or create a database file first!\n");
+                    printf("先与服务器建立连接!\n");
                 }
             }
             else
@@ -197,6 +204,7 @@ int main ( int argc, char **argv )
             {
                 if ( cmp == 0 && tcpClient != NULL )
                 {
+					result = TCPClient_Connect(tcpClient, IP_ADDR_SERVER, IP_PORT_SERVER);
                     key = strchr(cmd, ' ');
                     *key = '\0';
                     key++;
@@ -213,13 +221,13 @@ int main ( int argc, char **argv )
 					TCPClient_Receive(tcpClient,
 								buffer,
 								sizeof(buffer));
-					NCProtocol_Dispose(ncp);
+					//NCProtocol_Dispose(ncp);
 					
                     printf("服务器：%s\n", buffer);
                 }
                 else
                 {
-                    printf("Please open or create a database file first!\n");
+                    printf("先与服务器建立连接!\n");
                 }
             }
             else
