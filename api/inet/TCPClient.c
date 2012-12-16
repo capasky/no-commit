@@ -17,6 +17,7 @@
  */
 
 #include <arpa/inet.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "TCPClient.h"
@@ -61,10 +62,10 @@ bool TCPClient_Connect(TCPClient * client, char * ipAddress, int port)
 	memset ( &serveraddr.sin_zero, 0, 8 );
 	client->Client = socket ( PF_INET, SOCK_STREAM, 0 );
 	if ( connect ( client->Client, ( struct sockaddr * ) &serveraddr,
-				sizeof ( struct sockaddr )))
-		return true;
-	else
+				sizeof ( struct sockaddr )) == -1)
 		return false;
+	else
+		return true;
 
 }
 
