@@ -16,17 +16,23 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <arpa/inet.h>
 #include <string.h>
 
 #include "api/inet/inetdef.h"
 #include "api/inet/protocol.h"
 #include "api/inet/TCPListener.h"
+#include "api/data/collection.h"
+#include "cmddef.h"
 
 #define PORT 				5533
 #define IP_ADDR 			"192.168.130.194"
 #define MAX_CONNECT_QUEUE	1024
 #define MAX_BUF_SIZE		1024
+
+Collection *cltion;
+char* excuteCMD ( NCProtocol *protocol );
 
 int main ( int arg, char** argv )
 {
@@ -83,7 +89,8 @@ int main ( int arg, char** argv )
 				printf ( "\n" );
 			}
 
-			ret = send ( newfd, "hi", sizeof ( "hi" ), 0 );
+			strcpy ( buf, excuteCMD ( ncprotocol ));
+			ret = send ( newfd, buf, strlen ( buf ), 0 );
 			if ( ret > 0 )
 			{
 				printf ( "rely %s : %d\n", 
@@ -95,4 +102,50 @@ int main ( int arg, char** argv )
 	close ( sockfd );
 
 	return 0;
+}
+
+char * excuteCMD ( NCProtocol *protocol )
+{
+	char *retMsg = ( char* ) malloc ( MAX_BUF_SIZE * sizeof ( char ));
+	memset ( retMsg, 0, MAX_BUF_SIZE );
+
+	switch ( protocol->command )
+	{
+		case CMD_OPEN_ID:
+			if (( cltion =  Collection_Create ( protocol->dataChunk[0]->data )) != NULL )
+				strcpy ( retMsg, "数据库打开正常！" );
+			else 
+				strcpy ( retMsg, "数据库打开失败！" );
+			break;
+		case CMD_CLOSE_ID:
+			if ( Collection_Dispose ( cltion ) < 0 )
+				strcpy ( retMsg, "数据库关闭失败！" );
+			else 
+				strcpy ( retMsg, "数据库关闭成功！" );
+			break;
+		case CMD_GET_ID:
+			retMsg = Collection_GetStr ( cltion, protocol->dataChunk[0]->data );
+			if ( retMsg == NULL )
+			{
+				retMsg = ( char* ) malloc ( MAX_BUF_SIZE * sizeof ( char ));
+				strcpy ( retMsg, "数据查找失败：无此数据！");
+			}
+			break;
+		case CMD_SET_ID:
+			if ( Collection_AddStr ( cltion, 
+						protocol->dataChunk[0]->data, protocol->dataChunk[1]->data ) < 0 )
+				strcpy ( retMsg, "数据插入失败！" );
+			else 
+				strcpy ( retMsg, "数据插入成功！" );
+			break;
+		case CMD_DEL_ID:
+			if ( Collection_RemoveStr ( cltion, protocol->dataChunk[0]->data ) < 0 )
+				strcpy ( retMsg, "数据删除失败！" );
+			else
+				strcpy ( retMsg, "数据删除成功！" );
+		defalut:
+			strcpy ( retMsg, "无效命令!" );
+	}
+	
+	return retMsg;
 }

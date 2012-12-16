@@ -15,14 +15,15 @@
  * Revision Log:
  * @author				@date				@version
  * capasky				2012.12.07			1.0.0.1
+ * yellhb				2012.12.16			1.0.1.0
  */
  
 #include <tcutil.h>
 #include <tchdb.h>
 #include <string.h>
+
 #include "collection.h"
 #include "dbapi.h"
-
 #include "../utils/stringutils.h"
 #include "../utils/convert.h"
 
@@ -76,12 +77,10 @@ int Collection_Clear ( Collection * container )
     while (( key = tchdbiternext2 ( container->db )) != NULL )
     {
         if ( !tchdbout2 ( container->db, key ))
-        {
-            return 0;
-        }
+            return DB_ERR;
     }
 
-    return 1;
+    return DB_OK;
 }
 
 /**
@@ -95,10 +94,10 @@ int Collection_AddStr ( Collection * container, char * key, char * value )
 	{
 		ecode = tchdbecode (( TCHDB * ) container->db );
 		fprintf ( stderr, "put error:%s\n", tchdberrmsg ( ecode ));
-		return 0;
+		return DB_ERR;
 	}
 
-	return 1;
+	return DB_OK;
 }
 
 /**
@@ -125,11 +124,9 @@ char * Collection_GetStr ( Collection * container, char * key )
 int Collection_RemoveStr ( Collection * container, char * key )
 {
     if ( !tchdbout2 ( container->db, key ))
-    {
-        return 0;
-    }
+        return DB_ERR;
 
-    return 1;
+    return DB_OK;
 }
 
 /**
@@ -138,11 +135,9 @@ int Collection_RemoveStr ( Collection * container, char * key )
 int Collection_ContainsStr ( Collection * container, char * key )
 {
     if ( Collection_GetStr ( container, key ) != NULL )
-    {
-        return 1;
-    }
+        return DB_OK;
 
-    return 0;
+    return DB_ERR;
 }
 
 /**
@@ -156,10 +151,10 @@ int Collection_AddInt ( Collection * container, int key, char * value )
 	{
 		ecode = tchdbecode (( TCHDB * ) container->db );
 		fprintf ( stderr, "put error:%s\n", tchdberrmsg ( ecode ));
-		return 0;
+		return DB_ERR;
 	}
 
-	return 1;
+	return DB_OK;
 }
 
 /**
@@ -169,9 +164,7 @@ char * Collection_GetInt ( Collection * container, int key )
 {
     char*   value;
 	int     ecode;
-
 	value = tchdbget2 (( TCHDB *) container->db, Convert_IntToString ( key ));
-
 	if ( !value )
 	{
 		ecode = tchdbecode (( TCHDB *) container->db );
@@ -188,11 +181,9 @@ char * Collection_GetInt ( Collection * container, int key )
 int Collection_RemoveInt ( Collection * container, int key )
 {
     if ( !tchdbout2 ( container->db, Convert_IntToString ( key )))
-    {
-        return 0;
-    }
+        return DB_ERR;
 
-    return 1;
+    return DB_OK;
 }
 
 /**
@@ -201,11 +192,9 @@ int Collection_RemoveInt ( Collection * container, int key )
 int Collection_ContainsInt ( Collection * container, int key )
 {
     if ( Collection_GetStr ( container, Convert_IntToString ( key )) != NULL )
-    {
-        return 1;
-    }
+        return DB_OK;
 
-    return 0;
+    return DB_ERR;
 }
 
 /**
@@ -225,8 +214,5 @@ void Collection_Iterator(Collection * container, Function function)
             function ( key, value );
         }
     }
-
 }
-
-
 
