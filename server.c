@@ -111,7 +111,10 @@ char * excuteCMD ( NCProtocol *protocol )
 			if ( Collection_Dispose ( cltion ) < 0 )
 				strcpy ( retMsg, "数据库关闭失败！" );
 			else 
+			{
 				strcpy ( retMsg, "数据库关闭成功！" );
+				printf ( "%s\n", retMsg );
+			}
 			break;
 		case CMD_GET_ID:
 			retMsg = Collection_GetStr ( cltion, protocol->dataChunk[0]->data );
