@@ -20,6 +20,7 @@
 #include <arpa/inet.h>
 #include <string.h>
 
+#include "api/inet/TCPServer.h"
 #include "api/inet/inetdef.h"
 #include "api/inet/protocol.h"
 #include "api/inet/TCPListener.h"
@@ -27,7 +28,7 @@
 #include "cmddef.h"
 
 #define PORT 				5533
-#define IP_ADDR 			"192.168.130.194"
+#define IP_ADDR 			"0.0.0.0"
 #define MAX_CONNECT_QUEUE	1024
 #define MAX_BUF_SIZE		1024
 
@@ -38,34 +39,30 @@ int main ( int arg, char** argv )
 {
 	int 		sockfd = -1;
 	char 		buf[MAX_BUF_SIZE];
+	char		sbuf[MAX_BUF_SIZE];
 	struct		sockaddr_in clientaddr;
-	struct		sockaddr_in addr;
+	TCPServer	*tcpServer;
 	int 		ret;
 	socklen_t	clientaddr_len = sizeof ( struct sockaddr_in );
 	NCProtocol	*ncprotocol;
-	
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons ( PORT );
-	addr.sin_addr.s_addr = inet_addr ( IP_ADDR );
-	memset ( &addr.sin_zero, 0, 8 );
 
-	sockfd = socket ( PF_INET, SOCK_STREAM, 0 );
-	ret = bind ( sockfd, (struct sockaddr *) &addr, sizeof ( struct sockaddr ));
-	if ( ret == -1 )
+	tcpServer =  TCPServer_Create ( IP_ADDR, PORT );
+	
+	if ( TCPServer_Bind ( tcpServer ) == -1 )
 	{
-		fprintf ( stderr, "Bind Error, %s : %d,", __FILE__, __LINE__ );
-		fprintf ( stderr, "%s : %d\n", ( char* ) inet_ntoa ( addr.sin_addr), 
-				ntohs ( addr.sin_port ));
-		close ( sockfd );
+		fprintf ( stderr, "绑定错误, %s : %d,", __FILE__, __LINE__ );
+		fprintf ( stderr, "%s : %d\n", ( char* ) inet_ntoa ( tcpServer->addr.sin_addr), 
+				ntohs ( tcpServer->addr.sin_port ));
+		TCPServer_Close ( tcpServer );
 		return -1;
 	}
 
-	ret = listen ( sockfd, MAX_CONNECT_QUEUE );
+	ret = listen ( tcpServer->sockfd, MAX_CONNECT_QUEUE );
 
 	while ( 1 )
 	{
 		int idata;
-		int newfd = accept ( sockfd, (struct sockaddr * ) &clientaddr, &clientaddr_len );
+		int newfd = accept ( tcpServer->sockfd, (struct sockaddr * ) &clientaddr, &clientaddr_len );
 		if ( newfd == -1 )
 		{
 			fprintf ( stderr, "Accept Error, %s : %d\n", __FILE__, __LINE__ );
@@ -88,9 +85,10 @@ int main ( int arg, char** argv )
 				}
 				printf ( "\n" );
 			}
-
-			strcpy ( buf, excuteCMD ( ncprotocol ));
-			ret = send ( newfd, buf, strlen ( buf ), 0 );
+			
+			memset ( sbuf, 0, MAX_BUF_SIZE );
+			strcpy ( sbuf, excuteCMD ( ncprotocol ));
+			ret = send ( newfd, sbuf, strlen ( sbuf ), 0 );
 			if ( ret > 0 )
 			{
 				printf ( "rely %s : %d\n", 
@@ -99,7 +97,7 @@ int main ( int arg, char** argv )
 			close ( newfd );
 		}
 	}
-	close ( sockfd );
+	TCPServer_Close ( tcpServer );
 
 	return 0;
 }
@@ -143,6 +141,7 @@ char * excuteCMD ( NCProtocol *protocol )
 				strcpy ( retMsg, "数据删除失败！" );
 			else
 				strcpy ( retMsg, "数据删除成功！" );
+			break;
 		defalut:
 			strcpy ( retMsg, "无效命令!" );
 	}
