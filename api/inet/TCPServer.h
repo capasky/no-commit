@@ -23,6 +23,9 @@
 
 #include "inetdef.h"
 
+#define MAX_BUF_SIZE 		1024
+#define MAX_CONNECT_QUEUE	1024
+
 /**
   * TCPServer 结构体的定义
   * @author yellhb
@@ -30,10 +33,12 @@
   */
 typedef struct sTCPServer
 {
-	char	IPAddress[INET_IPADDR_STRING_LEN];	/* IP Address */
-	SOCKET 	sockfd;				/* 基础Socket  */
-	int 	Port;				/* 端口号 */
-	struct 	sockaddr_in addr;	/* socket 信息 */
+	char		IPAddress[INET_IPADDR_STRING_LEN];	/* IP Address */
+	SOCKET 		sockfd;						/* 基础Socket  */
+	int 		Port;						/* 端口号 */
+	struct 		sockaddr_in addr;			/* socket 信息 */
+	struct		sockaddr_in	clientaddr;		/* 客户端socket信息 */
+	socklen_t 	clientaddr_len;				/* socket长度 */
 } TCPServer;
 
 /**
@@ -58,5 +63,34 @@ int TCPServer_Bind ( TCPServer *tcpServer );
   * @return 返回关闭是否成功 -1关闭失败， 0关闭成功
   */
 int TCPServer_Close ( TCPServer *tcpServer ); 
+
+/**
+  * TCPServer_Recv 接收客户端消息
+  * @param sockfd
+  * @return 返回收到到消息串，若接收失败返回NULL
+  */
+char * TCPServer_Recv ( SOCKET sockfd );
+
+/**
+  * TCPServer_Send 向客户端发送反馈消息
+  * @param sockfd
+  * @param 待发送到消息序列
+  * @return 返回发送到字节总数
+  */
+int TCPServer_Send ( SOCKET sockfd, char * sendBuf );
+
+/**
+  * TCPServer_Listen 使server到socket处于被动监听状态，并设置消息队列
+  * @param TCPServer指针
+  * @return 返回设置是否成功 -1为失败，0为成功
+  */
+int TCPServer_Listen ( TCPServer *tcpServer );
+
+/**
+  * TCPServer_Accept 接收客户端请求
+  * @param TCPServer指针
+  * @return 返回新到socket标识
+  */
+SOCKET TCPServer_Accept ( TCPServer *tcpServer );
 
 #endif
