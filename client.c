@@ -26,8 +26,10 @@
 
 #include "cmddef.h"
 
-#define IP_ADDR_SERVER  "192.168.130.194"
-#define IP_PORT_SERVER  5000
+#define IP_ADDR_SERVER  	"192.168.130.194"
+#define IP_PORT_SERVER  	5533
+
+#define IP_ADDR_CLIENT		"192.168.130.143"
 
 int main ( int argc, char **argv )
 {
@@ -38,11 +40,12 @@ int main ( int argc, char **argv )
     bool 			result = false;
     char 			buffer[1024];
     char *			dbFile;
-    TCPClient * 	tcpClient;
+    TCPClient * 	tcpClient = NULL;
 
     NCProtocol * 	ncp;
     NCData * 		ncData[2];
 
+	int 			mlen = 0;
     printf("NoCommit>>");
     
     gets(cmd);
@@ -55,19 +58,18 @@ int main ( int argc, char **argv )
             cmp = strncmp(cmd, CMD_OPEN, sizeof(CMD_OPEN) - 1);
             if ( cmp == 0 )
             {
-                if (tcpClient != NULL )
+                if (tcpClient == NULL )
                 {
                     key = strchr(cmd, ' ');
                     *key = '\0';
                     key++;
                     dbFile = strdup(key);
 
-					tcpClient = TCPClient_Create("192.168.130.51", 0);
+					tcpClient = TCPClient_Create(IP_ADDR_CLIENT, 0);
 					result = TCPClient_Connect(tcpClient, IP_ADDR_SERVER, IP_PORT_SERVER);
-					if (!result)
+					if (!result || tcpClient == NULL)
 					{
-						fprintf(stderr, "TCP连接出错，错误代码：%d\n", result);
-						return ( EXIT_FAILURE );
+						fprintf(stderr, "TCP连接出错，错误代码：%d\n", 1);
 					}
 					else
 					{
@@ -77,15 +79,6 @@ int main ( int argc, char **argv )
 									CMD_OPEN_ID,
 									1,
 									ncData);
-						TCPClient_Send(tcpClient,
-									NCProtocol_Encapsul(ncp),
-									ncp->totalLength);
-						TCPClient_Receive(tcpClient,
-									buffer,
-									sizeof(buffer));
-						//NCProtocol_Dispose(ncp);
-						
-						printf("服务器：%s\n", buffer);
 					}
                 }
                 else
@@ -104,7 +97,20 @@ int main ( int argc, char **argv )
             {
                 if ( tcpClient != NULL )
                 {
-					result = TCPClient_Connect(tcpClient, IP_ADDR_SERVER, IP_PORT_SERVER);
+                    ncp = NCProtocol_Create(
+								CMD_CLOSE_ID,
+								0,
+								NULL);
+					TCPClient_Send(tcpClient,
+								NCProtocol_Encapsul(ncp),
+								ncp->totalLength);
+					mlen = TCPClient_Receive(tcpClient,
+								buffer,
+								sizeof(buffer));
+					//NCProtocol_Dispose(ncp);
+					buffer[mlen] = '\0';
+					printf("服务器：%s\n", buffer);
+					printf("%s::%s>>", tcpClient->IPAddress, dbFile);
 					if (TCPClient_Close(tcpClient))
 					{
 						printf("已关闭与服务器的连接");
@@ -143,15 +149,6 @@ int main ( int argc, char **argv )
 								CMD_SET_ID,
 								2,
 								ncData);
-					TCPClient_Send(tcpClient,
-								NCProtocol_Encapsul(ncp),
-								ncp->totalLength);
-					TCPClient_Receive(tcpClient,
-								buffer,
-								sizeof(buffer));
-					//NCProtocol_Dispose(ncp);
-					
-					printf("服务器：%s\n", buffer);
                 }
                 else
                 {
@@ -178,15 +175,6 @@ int main ( int argc, char **argv )
 								CMD_GET_ID,
 								1,
 								ncData);
-					TCPClient_Send(tcpClient,
-								NCProtocol_Encapsul(ncp),
-								ncp->totalLength);
-					TCPClient_Receive(tcpClient,
-								buffer,
-								sizeof(buffer));
-					//NCProtocol_Dispose(ncp);
-					
-                    printf("服务器：%s\n", buffer);
                 }
                 else
                 {
@@ -215,15 +203,6 @@ int main ( int argc, char **argv )
 								CMD_DEL_ID,
 								1,
 								ncData);
-					TCPClient_Send(tcpClient,
-								NCProtocol_Encapsul(ncp),
-								ncp->totalLength);
-					TCPClient_Receive(tcpClient,
-								buffer,
-								sizeof(buffer));
-					//NCProtocol_Dispose(ncp);
-					
-                    printf("服务器：%s\n", buffer);
                 }
                 else
                 {
@@ -239,7 +218,6 @@ int main ( int argc, char **argv )
             printf("没有此命令： \"%s\"\n", cmd);
             break;
         }
-
         fflush( stdin );
         if (tcpClient == NULL)
         {
@@ -247,7 +225,16 @@ int main ( int argc, char **argv )
         }
         else
         {
-            printf("nocommit::%s::%s>>", tcpClient->IPAddress, dbFile);
+			TCPClient_Send(tcpClient,
+						NCProtocol_Encapsul(ncp),
+						ncp->totalLength);
+			mlen = TCPClient_Receive(tcpClient,
+						buffer,
+						sizeof(buffer));
+			//NCProtocol_Dispose(ncp);
+			buffer[mlen] = '\0';
+			printf("服务器：%s\n", buffer);
+            printf("%s::%s>>", tcpClient->IPAddress, dbFile);
         }
         gets(cmd);
     }
