@@ -157,10 +157,6 @@ NCProtocol * NCProtocol_Parse(char * data)
 
     dataChunk = (NCData **)malloc(sizeof(struct sNCData *) * chunkCount);
 
-    if (dataChunk == NULL)
-    {
-        return NULL;
-    }
     for(i = 0; i < chunkCount; i++)
     {
         len = (int)(*data);
