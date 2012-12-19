@@ -27,9 +27,6 @@
 #include "api/data/collection.h"
 #include "cmddef.h"
 
-#define PORT 				5533
-#define IP_ADDR 			"0.0.0.0"
-#define MAX_CONNECT_QUEUE	1024
 #define MAX_BUF_SIZE		1024
 
 Collection *cltion;
@@ -37,16 +34,12 @@ char* excuteCMD ( NCProtocol *protocol );
 
 int main ( int arg, char** argv )
 {
-	int 		sockfd = -1;
-	char 		buf[MAX_BUF_SIZE];
+	char*		buf;
 	char		sbuf[MAX_BUF_SIZE];
-	struct		sockaddr_in clientaddr;
-	TCPServer	*tcpServer;
-	int 		ret;
-	socklen_t	clientaddr_len = sizeof ( struct sockaddr_in );
-	NCProtocol	*ncprotocol;
+	TCPServer*	tcpServer;
+	NCProtocol*	ncprotocol;
 
-	tcpServer =  TCPServer_Create ( IP_ADDR, PORT );
+	tcpServer =  TCPServer_Create ( "0.0.0.0", 5533 );
 	
 	if ( TCPServer_Bind ( tcpServer ) == -1 )
 	{
@@ -57,42 +50,41 @@ int main ( int arg, char** argv )
 		return -1;
 	}
 
-	ret = listen ( tcpServer->sockfd, MAX_CONNECT_QUEUE );
+	TCPServer_Listen ( tcpServer );
 
 	while ( 1 )
 	{
 		int idata;
-		int newfd = accept ( tcpServer->sockfd, (struct sockaddr * ) &clientaddr, &clientaddr_len );
+		int newfd = TCPServer_Accept ( tcpServer );
 		if ( newfd == -1 )
 		{
-			fprintf ( stderr, "Accept Error, %s : %d\n", __FILE__, __LINE__ );
+			fprintf ( stderr, "接收错误, %s : %d\n", __FILE__, __LINE__ );
 		}
 		else 
 		{
-			ret = recv ( newfd, buf, MAX_BUF_SIZE, 0 );
+			buf = TCPServer_Recv ( newfd );
 			
-			if ( ret > 0 )
+			if ( buf != NULL )
 			{	
 				ncprotocol = NCProtocol_Parse ( buf );
-				printf ( "Recv Message from %s : %d\n Command: %d	chunkCount: %d ", 
-						( char* ) inet_ntoa ( clientaddr.sin_addr), 
-						ntohs ( clientaddr.sin_port ), 
+				printf ( "从 %s : %d 接收到消息\n 命令代码: %d	数据字段数: %d ", 
+						( char* ) inet_ntoa ( tcpServer->clientaddr.sin_addr), 
+						ntohs ( tcpServer->clientaddr.sin_port ), 
 						ncprotocol->command, 
 						ncprotocol->chunkCount );
 				for ( idata = 0; idata < ncprotocol->chunkCount; ++idata )
 				{
-					printf ( " Data%d : %s ", idata + 1, ncprotocol->dataChunk[idata]->data );
+					printf ( " 数据%d : %s ", idata + 1, ncprotocol->dataChunk[idata]->data );
 				}
 				printf ( "\n" );
 			}
 			
 			memset ( sbuf, 0, MAX_BUF_SIZE );
 			strcpy ( sbuf, excuteCMD ( ncprotocol ));
-			ret = send ( newfd, sbuf, strlen ( sbuf ), 0 );
-			if ( ret > 0 )
+			if ( TCPServer_Send ( newfd, sbuf ) > 0 )
 			{
-				printf ( "rely %s : %d\n", 
-						( char* ) inet_ntoa ( clientaddr.sin_addr ), ntohs ( clientaddr.sin_port ));
+				printf ( "回复 %s : %d\n", 
+						( char* ) inet_ntoa ( tcpServer->clientaddr.sin_addr ), ntohs ( tcpServer->clientaddr.sin_port ));
 			}
 			close ( newfd );
 		}
