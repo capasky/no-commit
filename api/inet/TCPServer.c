@@ -14,6 +14,7 @@
  * Revision Log:
  * @author              @date               @version
  * yellhb               2012.12.19          1.0.0.1
+ * yellhb				2012.12.20			1.0.1.0
  */
 
 #include <arpa/inet.h>
@@ -49,7 +50,7 @@ TCPServer * TCPServer_Create ( char *ipAddress, int port )
 
 	tcpServer->clientaddr_len = sizeof ( struct sockaddr_in );
 	
-	tcpServer->epollfd = epoll_create( MAX_CONNECT_FD );
+	tcpServer->epollfd = epoll_create( MAX_CONNECT_QUEUE );
 	opts = fcntl ( tcpServer->sockfd, F_GETFL );
 	if ( opts < 0 )
 	{
@@ -59,9 +60,9 @@ TCPServer * TCPServer_Create ( char *ipAddress, int port )
 	opts |= O_NONBLOCK;
 	if ( fcntl ( tcpServer->sockfd, F_SETFL, opts ) < 0 )
 	{
-		fprintf ( stderr, "fcntl(sock,SETFL,opts) ERROR, %s:%s", __FILE__, __LINE__ );
+		fprintf ( stderr, "fcntl(sock,SETFL,opts) ERROR, %s:%d", __FILE__, __LINE__ );
 	}
-	event.data.fd = sockfd;
+	event.data.fd = tcpServer->sockfd;
 	event.events = EPOLLIN;
 	epoll_ctl ( tcpServer->epollfd, EPOLL_CTL_ADD, tcpServer->sockfd, &event );
 
@@ -75,8 +76,9 @@ TCPServer * TCPServer_Create ( char *ipAddress, int port )
   */
 int TCPServer_Bind ( TCPServer *tcpServer )
 {
-	//setsockopt ( tcpServer->sockfd, SOL_SOCKET, 
-	//		SO_REUSEADDR, &SO_REUSEADDR, sizeof ( SO_REUSEADDR ));
+	int opt = SO_REUSEADDR;
+	setsockopt ( tcpServer->sockfd, SOL_SOCKET, 
+			SO_REUSEADDR, &opt, sizeof ( SO_REUSEADDR ));
 	return  bind ( tcpServer->sockfd, 
 				 ( struct sockaddr* ) &(tcpServer->addr), 
 				 sizeof ( struct sockaddr ));
@@ -87,14 +89,32 @@ int TCPServer_Bind ( TCPServer *tcpServer )
   * @param TCPServer指针
   * @return 返回关闭是否成功 -1关闭失败， 0关闭成功
   */
-int TCPServer_Close ( TCPServer *tcpServer )
+int TCPServer_Close ( TCPServer* tcpServer )
 {
+	if ( tcpServer == NULL )
+	{
+		printf ( "ERROR HERE\n" );
+	}
+	else 
+	{
+		printf ( "sockfd:%d\nepollid:%d\n", tcpServer->sockfd, tcpServer->epollfd );
+	}
 	if ( close ( tcpServer->sockfd ) < 0 )
 		return -1;
-	if ( colse ( tcpServer->epollfd ) < 0 )
+	if ( close ( tcpServer->epollfd ) < 0 )
 		return -1;
 
 	return 0;
+}
+
+/**
+  *	TCPServer_SockClose 关闭socket
+  * @param socketfd
+  * @return 返回关闭是否成功 -1关闭失败， 0关闭成功
+  */
+int TCPServer_SockClose ( SOCKET sockfd )
+{
+	return close ( sockfd );
 }
 
 /**
@@ -155,7 +175,7 @@ SOCKET TCPServer_Accept ( TCPServer *tcpServer )
 			}
 			event.data.fd = newfd;
 			event.events = EPOLLIN;
-			epoll_ctl ( tcpServer->eopllfd, EPOLL_CTL_ADD, newfd, &event );
+			epoll_ctl ( tcpServer->epollfd, EPOLL_CTL_ADD, newfd, &event );
 		}
 		else 
 		{

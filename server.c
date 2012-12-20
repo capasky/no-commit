@@ -13,6 +13,7 @@
  * Revision Log:
  * @author              @date               @version
  * yellhb               2012.12.15          1.0.0.1
+ * yellhb				2012.12.20			1.0.1.1
  */
 
 #include <stdio.h>
@@ -25,20 +26,20 @@
 #include "api/inet/protocol.h"
 #include "api/inet/TCPListener.h"
 #include "api/data/collection.h"
-#include "cmddef.h"
+#include "command.h"
 
 #define MAX_BUF_SIZE		1024
 
-Collection *cltion;
-char* excuteCMD ( NCProtocol *protocol );
-void* tFunction ( void* param );
-
-struct Param 
+typedef struct PARAM
 {
 	int 		sockfd;
 	TCPServer*	server;
 	NCProtocol*	ncprotocol;
-};
+} Param;
+
+char* excuteCMD ( NCProtocol *protocol );
+void* tFunction ( void* pparam );
+Collection* cltion;
 
 int main ( int arg, char** argv )
 {
@@ -61,7 +62,6 @@ int main ( int arg, char** argv )
 
 	while ( 1 )
 	{
-		int idata;
 		int newfd = TCPServer_Accept ( tcpServer );
 		if ( newfd == -1 )
 		{
@@ -72,20 +72,25 @@ int main ( int arg, char** argv )
 			param = ( Param* ) malloc ( sizeof ( Param ));
 			param->sockfd = newfd;
 			param->server = tcpServer;
+			param->server = ( TCPServer* ) malloc ( sizeof ( TCPServer ));
+			memcpy ( &param->server, &tcpServer, sizeof ( TCPServer ));
 			if ( pthread_create ( &tid, NULL, tFunction, ( void* )param ) != 0 )
-			
-		}
+			{
+				fprintf ( stderr, "线程创建失败,%s:%d\n", __FILE__, __LINE__ );
+			}
+		}		
 	}
 	TCPServer_Close ( tcpServer );
 
 	return 0;
 }
 
-void* tFunction ( void* param )
+void* tFunction ( void* pparam )
 {
 	char* 	buf;
 	char	sbuf[MAX_BUF_SIZE];
-	param = ( struct Param* ) param;
+	Param*	param = ( Param* )pparam;
+	int 	idata;
 
 	buf = TCPServer_Recv ( param->sockfd );
 			
@@ -113,7 +118,7 @@ void* tFunction ( void* param )
 				ntohs ( param->server->clientaddr.sin_port ), 
 				sbuf );
 	}
-	TCPServet_Close ( param->sockfd );
+	TCPServer_SockClose ( param->sockfd );
 }
 
 char * excuteCMD ( NCProtocol *protocol )
@@ -124,22 +129,51 @@ char * excuteCMD ( NCProtocol *protocol )
 	switch ( protocol->command )
 	{
 		case CMD_OPEN_ID:
-			if (( cltion =  Collection_Create ( protocol->dataChunk[0]->data )) != NULL )
-				strcpy ( retMsg, "数据库打开正常！" );
-			else 
-				strcpy ( retMsg, "数据库打开失败！" );
-			break;
-		case CMD_CLOSE_ID:
-			if ( Collection_Dispose ( cltion ) < 0 )
-				strcpy ( retMsg, "数据库关闭失败！" );
+			if ( cltion == NULL )
+			{
+				if (( cltion =  Collection_Create ( protocol->dataChunk[0]->data )) != NULL )
+				{
+					cltion->itemCount = 1;
+					strcpy ( retMsg, "数据库打开正常！" );
+				}
+				else 
+					strcpy ( retMsg, "数据库打开失败！" );
+			}
 			else 
 			{
-				strcpy ( retMsg, "数据库关闭成功！" );
-				printf ( "%s\n", retMsg );
+				cltion->itemCount++;
+				strcpy ( retMsg, "数据库已经打开！" );
+			}
+			break;
+		case CMD_CLOSE_ID:
+			printf ( "here close\n" );
+			if ( cltion != NULL )
+			{
+				if ( cltion->itemCount == 1 )
+				{
+					if ( Collection_Dispose ( cltion ) < 0 )
+						strcpy ( retMsg, "数据库关闭失败!" );
+					else 
+						strcpy ( retMsg, "数据库关闭成功!" );
+				}
+				else if ( cltion->itemCount > 1 )
+				{
+					printf ( "cltion->count:%d\n", cltion->itemCount );
+					cltion->itemCount--;
+					strcpy ( retMsg, "数据库关闭成功!" );
+				}
+			}
+			else 
+			{
+				strcpy ( retMsg, "数据库关闭失败！" );
 			}
 			break;
 		case CMD_GET_ID:
-			retMsg = Collection_GetStr ( cltion, protocol->dataChunk[0]->data );
+			if ( cltion != NULL )
+			{
+				retMsg = Collection_GetStr ( cltion, protocol->dataChunk[0]->data );
+			}
+
 			if ( retMsg == NULL )
 			{
 				retMsg = ( char* ) malloc ( MAX_BUF_SIZE * sizeof ( char ));
@@ -147,14 +181,14 @@ char * excuteCMD ( NCProtocol *protocol )
 			}
 			break;
 		case CMD_SET_ID:
-			if ( Collection_AddStr ( cltion, 
+			if ( cltion == NULL || Collection_AddStr ( cltion, 
 						protocol->dataChunk[0]->data, protocol->dataChunk[1]->data ) < 0 )
 				strcpy ( retMsg, "数据插入失败！" );
 			else 
 				strcpy ( retMsg, "数据插入成功！" );
 			break;
 		case CMD_DEL_ID:
-			if ( Collection_RemoveStr ( cltion, protocol->dataChunk[0]->data ) < 0 )
+			if ( cltion == NULL || Collection_RemoveStr ( cltion, protocol->dataChunk[0]->data ) < 0 )
 				strcpy ( retMsg, "数据删除失败！" );
 			else
 				strcpy ( retMsg, "数据删除成功！" );
