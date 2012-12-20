@@ -40,7 +40,7 @@ NCData * NCData_Create(int length, char * data)
     }
 
     ncd->length = length;
-    ncd->data = data;
+    ncd->data = strdup(data);
 
     return ncd;
 }
@@ -91,7 +91,7 @@ NCProtocol * NCProtocol_Create( int         command,
     len = sizeof(int) * 3;
     for (i = 0; i < chunkCount; i++)
     {
-        len += sizeof(int) + dataChunk[i]->length;
+        len += (sizeof(int) + dataChunk[i]->length);
     }
     ncp->command = command;
     ncp->totalLength = len;
@@ -115,7 +115,6 @@ bool NCProtocol_Dispose(NCProtocol * ncp)
 	}
 	else
 	{
-		printf("OK\n");
 		for (i = 0; i < ncp->chunkCount; i++)
 		{
 			if (ncp->dataChunk[i] != NULL)
@@ -172,11 +171,7 @@ NCProtocol * NCProtocol_Parse(char * data)
         }
         data += len;
     }
-    return NCProtocol_Create(
-                command,
-                chunkCount,
-                dataChunk
-                );
+    return NCProtocol_Create( command, chunkCount, dataChunk );
 }
 
 /**

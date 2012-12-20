@@ -16,8 +16,10 @@
  * capasky              2012.12.19          1.0.0.0
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <regex.h>
 
 #include "base.h"
 #include "command.h"
@@ -28,9 +30,24 @@
  * 命令字符串
  * 成功则返回True，否则返回False
  */
-static bool Command_Test(char * cmdText)
+bool Command_Test(char * cmdText)
 {
-	return true;
+	int result;
+	regex_t reg;
+    regmatch_t pmatch[1];
+    const size_t nmatch = 1;
+    regcomp( &reg, CMD_RE, REG_EXTENDED | REG_ICASE | REG_NOSUB );
+    result = regexec( &reg, cmdText, nmatch, pmatch, 0 );
+    if ( result == 0 )
+    {
+        regfree(&reg);
+        return true;
+    }
+    else
+	{
+		regfree(&reg);
+		return false;
+	}
 }
 
 /**
@@ -38,7 +55,7 @@ static bool Command_Test(char * cmdText)
  * @param cmd 命令内容
  * @return 成功则返回相应命令ID ，否则返回0
  */
-static int Command_GetID(char * cmd)
+int Command_GetID(char * cmd)
 {
 	if (cmd != NULL)
 	{
@@ -117,16 +134,20 @@ Command * Command_Create(
 /**
  * Command_TryParse 尝试解析命令字符串为命令结构体对象
  * @param cmdString
- * @param cmd
- * @return 成功则返回True，否则返回False
+ * @return 成功则返回解析的Command指针，否则返回NULL
  */
-bool Command_TryParse(char * cmdString, Command * cmd)
+Command * Command_TryParse(char * cmdString)
 {
 	char * key = NULL,
 		 * value = NULL;
 	int index = 0;
+	if ( Command_Test( cmdString ) == false )
+	{
+		return false;
+	}
+	
 	String commandString = String_Create(cmdString);
-	if (cmd == NULL || commandString.Length < 1)
+	if (commandString.Length < 1)
 	{
 		return false;
 	}
@@ -134,25 +155,24 @@ bool Command_TryParse(char * cmdString, Command * cmd)
 						commandString,
 						String_Create(" ")
 						);
-	
 	if (sa.Count > 1)
 	{
 		key = sa.Splited[1].data;
 	}
 	if (sa.Count > 2)
 	{
+		index = sa.Splited[0].Length + sa.Splited[1].Length + 3;
 		value = String_Substring(
 						commandString,
 						index,
-						commandString.Length - 1
+						commandString.Length
 						).data;
 	}
-	
-	cmd = Command_Create(
-				Command_GetID(sa.Splited[0].data),
-				sa.Splited[0].data,
-				key,
-				value
-				);
-	return true;
+	Command * cmd = Command_Create(
+						Command_GetID(sa.Splited[0].data),
+						sa.Splited[0].data,
+						key,
+						value
+						);
+	return cmd;
 }

@@ -20,6 +20,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "../../base.h"
 #include "TCPListener.h"
 #include "inetdef.h"
 

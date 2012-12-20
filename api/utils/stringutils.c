@@ -18,6 +18,7 @@
  * capasky			2012.12.19			1.0.1.1					修复String_Substring的BUG
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -228,11 +229,13 @@ String String_Replace(String source, String oldValue, String newValue)
 StringArrry	String_Split(String source, String token)
 {
 	int i;
-	char * tmp;
+	char * src,
+		 * tmp;
 	StringArrry sa;
 	sa.Count = String_Contains(source, token) + 1;
 	sa.Splited = (String *) malloc ( sizeof(struct sString) * sa.Count);
-	tmp = strtok(source.data, token.data);
+	src = strdup(source.data);
+	tmp = strtok(src, token.data);
 	if (tmp == NULL)
 	{
 		free(sa.Splited);
@@ -284,12 +287,19 @@ String	String_Substring(String source, int start, int end)
 {
 	String result;
 	if (source.Length == 0 || source.data == NULL ||
-		start < 1 || end > source.Length)
+		start < 1 || end > source.Length ||
+		start > end)
 	{
 		return String_Create("");
 	}
 	result = String_Create( &(source.data[start - 1]) );
-	result.data[end - 1] = 0;
+	result.data[end - start + 1] = 0;
+	
+	if (result.data == NULL)
+	{
+		printf("NULL\n");
+	}
+	
 	return result;
 }
 

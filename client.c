@@ -28,222 +28,146 @@
 #include "command.h"
 
 #define IP_ADDR_SERVER  	"127.0.0.1"
-#define IP_PORT_SERVER  	5544
+#define IP_PORT_SERVER  	5533
 
 #define IP_ADDR_CLIENT		"127.0.0.1"
 
 #define IP_ADDR_LOCAL		"127.0.0.1"
 
+typedef struct sNetContext
+{
+	bool 		Active;
+	char *		DBFile;
+	bool 		Connected;
+	TCPClient * Client;
+} NetContext;
+
+static NetContext Current;
+
+void ExecuteCommand(Command * cmd);
+NCProtocol * GenerateNCP(Command * cmd);
+bool CheckCommand(Command * cmd);
+
 int main ( int argc, char **argv )
 {
-    char 			cmd[CMD_MAX_LEN];
-    char * 			key,
-         * 			value;
-    int 			cmp = -1;
-    bool 			result = false;
-    char 			buffer[1024];
-    char *			dbFile;
-    TCPClient * 	tcpClient = NULL;
+	char 			cmdString[CMD_MAX_LEN];
+	Command *		cmd;
 
-    NCProtocol * 	ncp;
-    NCData * 		ncData[2];
+	Current.Active 		= false;
+	Current.Connected 	= false;
+	Current.Client 		= NULL;
+	Current.DBFile 		= NULL;
+	
+	printf("NoCommit1>>");
+	while( gets(cmdString) != NULL)
+	{
+		cmd = Command_TryParse(cmdString);
+		if (CheckCommand(cmd))
+		{
+			ExecuteCommand(cmd);
+		}
+		if (Current.Active)
+		{
+			printf("%s::%s>>",
+				Current.Client->RemoteAddress, Current.DBFile);
+		}
+		else
+		{
+			printf("NoCommit>>");
+		}
+	}
+	return 0;
 
-	int 			mlen = 0;
-    printf("NoCommit>>");
-    
-    gets(cmd);
+}
 
-    while ( strcmp( cmd, CMD_QUIT ) != 0 )
-    {
-        switch (*cmd)
-        {
-        case 'o':
-            cmp = strncmp(cmd, CMD_OPEN, sizeof(CMD_OPEN) - 1);
-            if ( cmp == 0 )
-            {
-                if (tcpClient == NULL )
-                {
-                    key = strchr(cmd, ' ');
-                    *key = '\0';
-                    key++;
-                    dbFile = strdup(key);
+void ExecuteCommand(Command * cmd)
+{
+	int 		i;
+	int 		mlen = 0;
+	char 		buffer[1024];
+	NCProtocol *ncp;
+	NCData * 	ncData[2];
+	int 		count = 0;
+	if (cmd == NULL || cmd->CommandID == CMD_QUIT_ID)
+	{
+		return;
+	}
+	
+	if (cmd->Key != NULL)
+	{
+		ncData[0] = NCData_Create(strlen(cmd->Key), cmd->Key);
+		count++;
+		if (cmd->Value != NULL)
+		{
+			ncData[1] = NCData_Create(strlen(cmd->Value), cmd->Value);
+			count++;
+		}
+		else
+		{
+			ncData[1] = NULL;
+		}
+	}
+	else
+	{
+		ncData[0] = NULL;
+	}
+	ncp = NCProtocol_Create( cmd->CommandID, count, ncData );
+	
+	if (Current.Client == NULL)
+	{
+		Current.Client = TCPClient_Create( IP_ADDR_SERVER, IP_PORT_SERVER );
+	}
+	if ( !(Current.Connected) )
+	{
+		Current.Connected = TCPClient_Connect(Current.Client);
+		if ( !(Current.Connected) )
+		{
+			fprintf(stderr, "TCP连接出错，错误代码：%d\n", 1);
+			return;
+		}
+	}
+	
+	TCPClient_Send( Current.Client, NCProtocol_Encapsul(ncp), ncp->totalLength );
+	mlen = TCPClient_Receive( Current.Client, buffer, sizeof(buffer) );
+	
+	Current.Connected = false;
+	
+	buffer[mlen] = '\0';
+	printf("服务器：%s\n", buffer);
+	if ( cmd->CommandID == CMD_OPEN_ID )
+	{
+		Current.DBFile = strdup(cmd->Key);
+		Current.Active = true;
+	}
+	if ( cmd->CommandID == CMD_CLOSE_ID )
+	{
+		TCPClient_Close( Current.Client );
+		Current.Active = false;
+	}
+	
+	return;
+}
 
-					tcpClient = TCPClient_Create(
-											IP_ADDR_SERVER,
-											IP_PORT_SERVER
-											);
-					result = TCPClient_Connect(tcpClient);
-					if (!result || tcpClient == NULL)
-					{
-						fprintf(stderr, "TCP连接出错，错误代码：%d\n", 1);
-					}
-					else
-					{
-						printf("已连接到服务器 %s !\n", tcpClient->RemoteAddress);
-						ncData[0] = NCData_Create(strlen(key), key);
-						ncp = NCProtocol_Create(
-									CMD_OPEN_ID,
-									1,
-									ncData);
-					}
-                }
-                else
-                {
-                    printf("文件 \"%s\" 已经打开!\n", dbFile);
-                }
-            }
-            else
-            {
-                printf("没有此命令： \"%s\"\n", cmd);
-            }
-            break;
-        case 'c':
-            cmp = strncmp(cmd, CMD_CLOSE, sizeof(CMD_CLOSE) - 1);
-            if ( cmp == 0 )
-            {
-                if ( tcpClient != NULL )
-                {
-					result = TCPClient_Connect(tcpClient);
-                    ncp = NCProtocol_Create(
-								CMD_CLOSE_ID,
-								0,
-								NULL);
-					TCPClient_Send(tcpClient,
-								NCProtocol_Encapsul(ncp),
-								ncp->totalLength);
-					mlen = TCPClient_Receive(tcpClient,
-								buffer,
-								sizeof(buffer));
-					//NCProtocol_Dispose(ncp);
-					buffer[mlen] = '\0';
-					printf("服务器：%s\n", buffer);
-					if (TCPClient_Close(tcpClient))
-					{
-						printf("已关闭与服务器的连接\n");
-					}
-					free(tcpClient);
-					tcpClient = NULL;
-                }
-                else
-                {
-                    printf("请先与服务器建立连接!\n");
-                }
-            }
-            else
-            {
-                printf("没有此命令： \"%s\"\n", cmd);
-            }
-            break;
-        case 's':
-            cmp = strncmp(cmd, CMD_SET, sizeof(CMD_SET) - 1);
-            if ( cmp == 0 )
-            {
-                if ( tcpClient != NULL )
-                {
-					result = TCPClient_Connect(tcpClient);
-                    key = strchr(cmd, ' ');
-                    *key = '\0';
-                    key++;
-                    value = strchr(key, ' ');
-                    *value = '\0';
-                    value++;
-                    
-                    ncData[0] = NCData_Create(strlen(key), key);
-                    ncData[1] = NCData_Create(strlen(value), value);
-                    
-                    ncp = NCProtocol_Create(
-								CMD_SET_ID,
-								2,
-								ncData);
-                }
-                else
-                {
-                    printf("先与服务器建立连接!\n");
-                }
-            }
-            else
-            {
-                printf("没有此命令： \"%s\"\n", cmd);
-            }
-            break;
-        case 'g':
-            cmp = strncmp(cmd, CMD_GET, sizeof(CMD_GET) - 1);
-            if ( cmp == 0 )
-            {
-                if ( tcpClient != NULL )
-                {
-					result = TCPClient_Connect(tcpClient);
-                    key = strchr(cmd, ' ');
-                    *key = '\0';
-                    key++;
-                    ncData[0] = NCData_Create(strlen(key), key);
-                    ncp = NCProtocol_Create(
-								CMD_GET_ID,
-								1,
-								ncData);
-                }
-                else
-                {
-                    printf("先与服务器建立连接!\n");
-                }
-            }
-            else
-            {
-                printf("没有此命令： \"%s\"\n", cmd);
-            }
-            break;
-        case 'd':
-            cmp = strncmp(cmd, CMD_DEL, sizeof(CMD_DEL) - 1);
-            if ( cmp == 0 )
-            {
-                if ( cmp == 0 && tcpClient != NULL )
-                {
-					result = TCPClient_Connect(tcpClient);
-                    key = strchr(cmd, ' ');
-                    *key = '\0';
-                    key++;
-                    
-                    ncData[0] = NCData_Create(strlen(key), key);
-                    
-                    ncp = NCProtocol_Create(
-								CMD_DEL_ID,
-								1,
-								ncData);
-                }
-                else
-                {
-                    printf("先与服务器建立连接!\n");
-                }
-            }
-            else
-            {
-                printf("没有此命令： \"%s\"\n", cmd);
-            }
-            break;
-        default:
-            printf("没有此命令： \"%s\"\n", cmd);
-            break;
-        }
-        fflush( stdin );
-        if (tcpClient == NULL)
-        {
-            printf("nocommit>>");
-        }
-        else
-        {
-			TCPClient_Send(tcpClient,
-						NCProtocol_Encapsul(ncp),
-						ncp->totalLength);
-			mlen = TCPClient_Receive(tcpClient,
-						buffer,
-						sizeof(buffer));
-			//NCProtocol_Dispose(ncp);
-			buffer[mlen] = '\0';
-			printf("服务器：%s\n", buffer);
-            printf("%s::%s>>", tcpClient->RemoteAddress, dbFile);
-        }
-        gets(cmd);
-    }
-
-    return 0;
+bool CheckCommand(Command * cmd)
+{
+	if (cmd == NULL)
+	{
+		printf("命令格式错误！\n");
+		return false;
+	}
+	if (cmd->CommandID == CMD_QUIT_ID)
+	{
+		exit(0);
+	}
+	if (cmd->CommandID == CMD_OPEN_ID && Current.Active)
+	{
+		printf("数据库连接已打开!\n");
+		return false;
+	}
+	if (cmd->CommandID != CMD_OPEN_ID && !(Current.Active))
+	{
+		printf("请先打开数据库连接!用法：open filename.ext\n");
+		return false;
+	}
+	return true;
 }
