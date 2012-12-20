@@ -14,6 +14,7 @@
  * Revision Log:
  * @author              @date               @version
  * yellhb               2012.12.19          1.0.0.1
+ * yellhb				2012.12.20			1.0.0.2
  */
 
 #ifndef TCPSERVER_H_INCLUDE
@@ -64,6 +65,13 @@ int TCPServer_Bind ( TCPServer *tcpServer );
   * @return 返回关闭是否成功 -1关闭失败， 0关闭成功
   */
 int TCPServer_Close ( TCPServer *tcpServer ); 
+
+/**
+  * TCPServer_SockClose 关闭socket
+  * @paramd socketfd
+  * @return 返回关闭是否成功 -1关闭失败， 0关闭成功
+  */
+int TCPServer_SockClose ( SOCKET sockfd );
 
 /**
   * TCPServer_Recv 接收客户端消息
