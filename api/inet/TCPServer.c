@@ -20,6 +20,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/epoll.h>
+#include <fcntl.h>
 
 #include "TCPServer.h"
 #include "inetdef.h"
@@ -32,6 +34,8 @@
   */
 TCPServer * TCPServer_Create ( char *ipAddress, int port )
 {
+	struct epoll_event event;
+	int opts;
 	TCPServer *tcpServer = ( TCPServer* ) malloc ( sizeof (TCPServer ));
 	
 	tcpServer->sockfd = socket ( PF_INET, SOCK_STREAM, 0);
@@ -45,6 +49,22 @@ TCPServer * TCPServer_Create ( char *ipAddress, int port )
 
 	tcpServer->clientaddr_len = sizeof ( struct sockaddr_in );
 	
+	tcpServer->epollfd = epoll_create( MAX_CONNECT_FD );
+	opts = fcntl ( tcpServer->sockfd, F_GETFL );
+	if ( opts < 0 )
+	{
+		fprintf ( stderr, "fcntl(sock,GETFL) ERROR, %s:%d\n", __FILE__, __LINE__ );
+	}
+
+	opts |= O_NONBLOCK;
+	if ( fcntl ( tcpServer->sockfd, F_SETFL, opts ) < 0 )
+	{
+		fprintf ( stderr, "fcntl(sock,SETFL,opts) ERROR, %s:%s", __FILE__, __LINE__ );
+	}
+	event.data.fd = sockfd;
+	event.events = EPOLLIN;
+	epoll_ctl ( tcpServer->epollfd, EPOLL_CTL_ADD, tcpServer->sockfd, &event );
+
 	return tcpServer;
 }
 
@@ -55,6 +75,8 @@ TCPServer * TCPServer_Create ( char *ipAddress, int port )
   */
 int TCPServer_Bind ( TCPServer *tcpServer )
 {
+	//setsockopt ( tcpServer->sockfd, SOL_SOCKET, 
+	//		SO_REUSEADDR, &SO_REUSEADDR, sizeof ( SO_REUSEADDR ));
 	return  bind ( tcpServer->sockfd, 
 				 ( struct sockaddr* ) &(tcpServer->addr), 
 				 sizeof ( struct sockaddr ));
@@ -67,7 +89,12 @@ int TCPServer_Bind ( TCPServer *tcpServer )
   */
 int TCPServer_Close ( TCPServer *tcpServer )
 {
-	return close ( tcpServer->sockfd );
+	if ( close ( tcpServer->sockfd ) < 0 )
+		return -1;
+	if ( colse ( tcpServer->epollfd ) < 0 )
+		return -1;
+
+	return 0;
 }
 
 /**
@@ -113,6 +140,28 @@ int TCPServer_Listen ( TCPServer *tcpServer )
   */
 SOCKET TCPServer_Accept ( TCPServer *tcpServer )
 {
+	while ( 1 )
+	{
+		struct epoll_event event;
+		int fdnum = epoll_wait ( tcpServer->epollfd, &event, 1, -1 );
+		if ( event.data.fd == tcpServer->sockfd )
+		{
+			struct sockaddr_in clientaddr;
+			socklen_t addr_len = sizeof ( struct sockaddr );
+			int newfd = accept ( tcpServer->sockfd, ( struct sockaddr* )&clientaddr, &addr_len );
+			if ( newfd == -1 )
+			{
+				fprintf ( stderr, "Accept ERROR, %s:%d", __FILE__, __LINE__ );
+			}
+			event.data.fd = newfd;
+			event.events = EPOLLIN;
+			epoll_ctl ( tcpServer->eopllfd, EPOLL_CTL_ADD, newfd, &event );
+		}
+		else 
+		{
+			return ( SOCKET ) event.data.fd;
+		}
+	}
 	return accept ( tcpServer->sockfd,
 			( struct sockaddr* ) & ( tcpServer->clientaddr ),
 			& ( tcpServer->clientaddr_len ));
