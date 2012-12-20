@@ -14,13 +14,13 @@
  * Revision Log:
  * @author              @date               @version
  * capasky              2012.12.13          1.0.0.1
+ * capasky				2012.12.18			1.0.1.0
  */
 
 #ifndef TCPCLIENT_H_INCLUDE
 #define TCPCLIENT_H_INCLUDE
 
-#include <arpa/inet.h>
-
+#include "../../base.h"
 #include "inetdef.h"
 
 /**
@@ -30,11 +30,12 @@
  */
 typedef struct sTCPClient
 {
-    bool    Active;                 /* 是否已建立连接。 */
     int     Available;              /* 已经从网络接收且可供读取的数据量。 */
-    char    IPAddress[INET_IPADDR_STRING_LEN];       /* IP Address */
     SOCKET  Client;                 /* 基础 Socket。 */
+    char    IPAddress[INET_IPADDR_STRING_LEN];       /* IP Address */
+    char	RemoteAddress[INET_IPADDR_STRING_LEN];
     int     Port;                   /* 端口号 */
+    int		RemotePort;
     bool    Connected;              /* Socket 是否已连接到远程主机。 */
     int     ReceiveBufferSize;      /* 接收缓冲区的大小。 */
     int     ReceiveTimeout;         /* TcpClient 等待接收数据的时间量。 */
@@ -47,9 +48,11 @@ typedef struct sTCPClient
  * TCPClient_Create 创建一个新的 TCPClient 对象。
  * @param ipAddress 客户端IP地址。
  * @param port 客户端端口号。
+ * @param remoteIPAddress 服务端IP地址。
+ * @param remotePort 服务端端口号。
  * @return 返回创建的 TCPClient 对象指针。
  */
-TCPClient * TCPClient_Create(char * ipAddress, int port);
+TCPClient * TCPClient_Create(char * remoteIPAddress, int remotePort);
 
 /**
  * TCPClient_Connect connect to a client
@@ -58,7 +61,7 @@ TCPClient * TCPClient_Create(char * ipAddress, int port);
  * @param port The port number to which you intend to connect.
  * @return 1 if success; or 0 if fail
  */
-bool TCPClient_Connect(TCPClient * client, char * ipAddress, int port);
+bool TCPClient_Connect(TCPClient * client);
 
 /**
  * TCPClient_异步的连接
@@ -67,7 +70,7 @@ bool TCPClient_Connect(TCPClient * client, char * ipAddress, int port);
  * @param port 连接的主机的端口号。
  * @return 成功返回true，否则返回false。
  */
-bool TCPClient_BeginConnect(TCPClient * client, char * ipAddress, int port);
+bool TCPClient_BeginConnect(TCPClient * client);
 
 /**
  * TCPClient_EndConnect 异步的结束一个TCP连接。

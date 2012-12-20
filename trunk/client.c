@@ -20,16 +20,19 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "base.h"
 #include "api/inet/TCPClient.h"
 #include "api/inet/protocol.h"
 #include "api/inet/inetdef.h"
 
-#include "cmddef.h"
+#include "command.h"
 
-#define IP_ADDR_SERVER  	"192.168.130.194"
-#define IP_PORT_SERVER  	5533
+#define IP_ADDR_SERVER  	"127.0.0.1"
+#define IP_PORT_SERVER  	5544
 
-#define IP_ADDR_CLIENT		"192.168.130.143"
+#define IP_ADDR_CLIENT		"127.0.0.1"
+
+#define IP_ADDR_LOCAL		"127.0.0.1"
 
 int main ( int argc, char **argv )
 {
@@ -65,15 +68,18 @@ int main ( int argc, char **argv )
                     key++;
                     dbFile = strdup(key);
 
-					tcpClient = TCPClient_Create(IP_ADDR_CLIENT, 0);
-					result = TCPClient_Connect(tcpClient, IP_ADDR_SERVER, IP_PORT_SERVER);
+					tcpClient = TCPClient_Create(
+											IP_ADDR_SERVER,
+											IP_PORT_SERVER
+											);
+					result = TCPClient_Connect(tcpClient);
 					if (!result || tcpClient == NULL)
 					{
 						fprintf(stderr, "TCP连接出错，错误代码：%d\n", 1);
 					}
 					else
 					{
-						printf("已连接到服务器 %s !\n", tcpClient->IPAddress);
+						printf("已连接到服务器 %s !\n", tcpClient->RemoteAddress);
 						ncData[0] = NCData_Create(strlen(key), key);
 						ncp = NCProtocol_Create(
 									CMD_OPEN_ID,
@@ -97,6 +103,7 @@ int main ( int argc, char **argv )
             {
                 if ( tcpClient != NULL )
                 {
+					result = TCPClient_Connect(tcpClient);
                     ncp = NCProtocol_Create(
 								CMD_CLOSE_ID,
 								0,
@@ -110,10 +117,9 @@ int main ( int argc, char **argv )
 					//NCProtocol_Dispose(ncp);
 					buffer[mlen] = '\0';
 					printf("服务器：%s\n", buffer);
-					printf("%s::%s>>", tcpClient->IPAddress, dbFile);
 					if (TCPClient_Close(tcpClient))
 					{
-						printf("已关闭与服务器的连接");
+						printf("已关闭与服务器的连接\n");
 					}
 					free(tcpClient);
 					tcpClient = NULL;
@@ -134,7 +140,7 @@ int main ( int argc, char **argv )
             {
                 if ( tcpClient != NULL )
                 {
-					result = TCPClient_Connect(tcpClient, IP_ADDR_SERVER, IP_PORT_SERVER);
+					result = TCPClient_Connect(tcpClient);
                     key = strchr(cmd, ' ');
                     *key = '\0';
                     key++;
@@ -166,7 +172,7 @@ int main ( int argc, char **argv )
             {
                 if ( tcpClient != NULL )
                 {
-					result = TCPClient_Connect(tcpClient, IP_ADDR_SERVER, IP_PORT_SERVER);
+					result = TCPClient_Connect(tcpClient);
                     key = strchr(cmd, ' ');
                     *key = '\0';
                     key++;
@@ -192,7 +198,7 @@ int main ( int argc, char **argv )
             {
                 if ( cmp == 0 && tcpClient != NULL )
                 {
-					result = TCPClient_Connect(tcpClient, IP_ADDR_SERVER, IP_PORT_SERVER);
+					result = TCPClient_Connect(tcpClient);
                     key = strchr(cmd, ' ');
                     *key = '\0';
                     key++;
@@ -234,7 +240,7 @@ int main ( int argc, char **argv )
 			//NCProtocol_Dispose(ncp);
 			buffer[mlen] = '\0';
 			printf("服务器：%s\n", buffer);
-            printf("%s::%s>>", tcpClient->IPAddress, dbFile);
+            printf("%s::%s>>", tcpClient->RemoteAddress, dbFile);
         }
         gets(cmd);
     }

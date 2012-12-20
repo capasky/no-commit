@@ -22,6 +22,7 @@
 #include <tchdb.h>
 #include <string.h>
 
+#include "../../base.h"
 #include "collection.h"
 #include "dbapi.h"
 #include "../utils/stringutils.h"

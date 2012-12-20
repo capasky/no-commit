@@ -18,6 +18,8 @@
  */
 
 #include <stdlib.h>
+
+#include "../../base.h"
 #include "convert.h"
 
 /**
