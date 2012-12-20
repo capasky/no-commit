@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../../base.h"
 #include "inetdef.h"
 #include "protocol.h"
 

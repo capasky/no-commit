@@ -19,6 +19,8 @@
 #ifndef CONVERT_H_INCLUDED
 #define CONVERT_H_INCLUDED
 
+#include "../../base.h"
+
 /**
  * IntToString convert an integer to string
  * @param num the orgin integer

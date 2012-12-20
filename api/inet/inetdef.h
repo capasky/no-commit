@@ -20,17 +20,15 @@
 
 #define INET_IPADDR_STRING_LEN 		16
 #define INET_PORT_VOID				0
+#define INET_SOCKET_INVALID			-1
 
 #define RECEIVE_BUFFER_SIZE 		1024
 #define RECEIVE_TIMEOUT				1000
 #define SEND_BUFFER_SIZE			1024
 #define SEND_TIMEOUT				1000
 
+
+
 typedef int SOCKET;
-
-typedef unsigned short bool;
-
-#define true        1
-#define false       0
 
 #endif

@@ -14,29 +14,34 @@
  * Revision Log:
  * @author              @date               @version
  * yellhb               2012.12.15          1.0.0.1
+ * capasky				2012.12.18			1.0.1.0
  */
 
 #include <arpa/inet.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "../../base.h"
 #include "TCPClient.h"
 #include "inetdef.h"
 
 /**
  * TCPClient_Create 创建一个新的 TCPClient 对象。
- * @param ipAddress 客户端IP地址。
- * @param port 客户端端口号。
+ * @param remoteIPAddress 服务端IP地址。
+ * @param remotePort 服务端端口号。
  * @return 返回创建的 TCPClient 对象指针。
  */
-TCPClient * TCPClient_Create(char * ipAddress, int port)
+TCPClient * TCPClient_Create(char * remoteIPAddress, int remotePort)
 {
 	TCPClient *tcpClient = ( TCPClient * ) malloc ( sizeof ( TCPClient ));
-	tcpClient->Active = false;
 	tcpClient->Available = false;
-	strcpy ( tcpClient->IPAddress, ipAddress );
+	tcpClient->Client = INET_SOCKET_INVALID;
+	//strcpy ( tcpClient->IPAddress, ipAddress );
+	strcpy ( tcpClient->RemoteAddress, remoteIPAddress );
 	tcpClient->Client = 0;
-	tcpClient->Port = port;
+	//tcpClient->Port = port;
+	tcpClient->RemotePort = remotePort;
 	tcpClient->Connected = false;
 	tcpClient->ReceiveBufferSize = RECEIVE_BUFFER_SIZE;
 	tcpClient->ReceiveTimeout = RECEIVE_TIMEOUT;
@@ -52,21 +57,28 @@ TCPClient * TCPClient_Create(char * ipAddress, int port)
  * @param port The port number to which you intend to connect.
  * @return 1 if success; or 0 if fail
  */
-bool TCPClient_Connect(TCPClient * client, char * ipAddress, int port)
+bool TCPClient_Connect(TCPClient * client)
 {
 	struct sockaddr_in serveraddr;
 	serveraddr.sin_family = AF_INET;
-	serveraddr.sin_port = htons ( port );
-	serveraddr.sin_addr.s_addr = inet_addr ( ipAddress );
+	serveraddr.sin_port = htons ( client->RemotePort );
+	serveraddr.sin_addr.s_addr = inet_addr ( client->RemoteAddress );
 
 	memset ( &serveraddr.sin_zero, 0, 8 );
-	client->Client = socket ( PF_INET, SOCK_STREAM, 0 );
-	if ( connect ( client->Client, ( struct sockaddr * ) &serveraddr,
+	
+	client->Client = socket ( AF_INET, SOCK_STREAM, 0 );
+	
+	if ( client->Client == INET_SOCKET_INVALID ||
+	connect ( client->Client, ( struct sockaddr * ) &serveraddr,
 				sizeof ( struct sockaddr )) == -1)
+	{
 		return false;
+	}
 	else
+	{
+		client->Connected = true;
 		return true;
-
+	}
 }
 
 /**
@@ -76,7 +88,7 @@ bool TCPClient_Connect(TCPClient * client, char * ipAddress, int port)
  * @param port 连接的主机的端口号。
  * @return 成功返回true，否则返回false。
  */
-bool TCPClient_BeginConnect(TCPClient * client, char * ipAddress, int port)
+bool TCPClient_BeginConnect(TCPClient * client)
 {
 	/* TODO */
 	return false;
@@ -100,7 +112,14 @@ bool TCPClient_EndConnect(TCPClient * client)
  */
 bool TCPClient_Close(TCPClient * client)
 {
-	return close ( client->Client );
+	if( close ( client->Client ) == 0 )
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }
 
 /**

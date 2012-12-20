@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "base.h"
 #include "api/data/collection.h"
 
 #define CMD_MAX_LEN     64
