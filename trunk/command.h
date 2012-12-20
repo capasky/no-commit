@@ -34,7 +34,7 @@
 #define CMD_SET         	"set"
 #define CMD_DEL         	"delete"
 #define CMD_QUIT        	"quit"
-#define CMD_RE          	"(open w+)|(close)|(get|delete ([0-9][a-z][A-Z])+)|(set ([0-9][a-z][A-Z])+ (.*))"
+#define CMD_RE          	"^(open\\s\\w+\\.\\w{2,5})|close|quit|((get|delete)\\s[0-9]+)|(set\\s[0-9]+\\s?.*)$"
 
 #include "base.h"
 
@@ -63,9 +63,24 @@ Command * Command_Create(
 /**
  * Command_TryParse 尝试解析命令字符串为命令结构体对象
  * @param cmdString
- * @param cmd
- * @return 成功则返回True，否则返回False
+ * @return 成功则返回解析的Command指针，否则返回NULL
  */
-bool Command_TryParse(char * cmdString, Command * cmd);
+Command * Command_TryParse(char * cmdString);
+
+/**
+ * 测试命令是否符合特定格式
+ * 命令字符串
+ * 成功则返回True，否则返回False
+ */
+bool Command_Test(char * cmdText);
+
+/**
+ * Command_GetID 获取命令ID
+ * @param cmd 命令内容
+ * @return 成功则返回相应命令ID ，否则返回0
+ */
+int Command_GetID(char * cmd);
+
+
 
 #endif

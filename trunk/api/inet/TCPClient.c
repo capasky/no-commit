@@ -114,6 +114,7 @@ bool TCPClient_Close(TCPClient * client)
 {
 	if( close ( client->Client ) == 0 )
 	{
+		client->Connected = false;
 		return true;
 	}
 	else

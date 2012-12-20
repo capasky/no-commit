@@ -16,7 +16,7 @@ client.o: client.c TCPClient.o protocol.o api/inet/inetdef.h command.o  \
 
 #server
 server: server.o TCPServer.o TCPListener.o protocol.o api/inet/inetdef.h\
-		collection.o dbapi.o convert.o base.h
+		collection.o dbapi.o convert.o command.o base.h
 		gcc -o server server.o TCPListener.o TCPServer.o protocol.o api/inet/inetdef.h\
 		 collection.o dbapi.o convert.o base.h -ltokyocabinet
 
