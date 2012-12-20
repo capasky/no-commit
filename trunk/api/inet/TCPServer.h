@@ -35,6 +35,7 @@ typedef struct sTCPServer
 {
 	char		IPAddress[INET_IPADDR_STRING_LEN];	/* IP Address */
 	SOCKET 		sockfd;						/* 基础Socket  */
+	int 		epollfd;					/* 		*/
 	int 		Port;						/* 端口号 */
 	struct 		sockaddr_in addr;			/* socket 信息 */
 	struct		sockaddr_in	clientaddr;		/* 客户端socket信息 */

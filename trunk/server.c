@@ -19,9 +19,9 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include <string.h>
+#include <pthread.h>
 
 #include "api/inet/TCPServer.h"
-#include "api/inet/inetdef.h"
 #include "api/inet/protocol.h"
 #include "api/inet/TCPListener.h"
 #include "api/data/collection.h"
@@ -31,13 +31,20 @@
 
 Collection *cltion;
 char* excuteCMD ( NCProtocol *protocol );
+void* tFunction ( void* param );
+
+struct Param 
+{
+	int 		sockfd;
+	TCPServer*	server;
+	NCProtocol*	ncprotocol;
+};
 
 int main ( int arg, char** argv )
 {
-	char*		buf;
-	char		sbuf[MAX_BUF_SIZE];
-	TCPServer*	tcpServer;
-	NCProtocol*	ncprotocol;
+	TCPServer*	tcpServer;	
+	pthread_t	tid;
+	Param*		param;
 
 	tcpServer =  TCPServer_Create ( "0.0.0.0", 5533 );
 	
@@ -62,36 +69,51 @@ int main ( int arg, char** argv )
 		}
 		else 
 		{
-			buf = TCPServer_Recv ( newfd );
+			param = ( Param* ) malloc ( sizeof ( Param ));
+			param->sockfd = newfd;
+			param->server = tcpServer;
+			if ( pthread_create ( &tid, NULL, tFunction, ( void* )param ) != 0 )
 			
-			if ( buf != NULL )
-			{	
-				ncprotocol = NCProtocol_Parse ( buf );
-				printf ( "从 %s : %d 接收到消息\n 命令代码: %d	数据字段数: %d ", 
-						( char* ) inet_ntoa ( tcpServer->clientaddr.sin_addr), 
-						ntohs ( tcpServer->clientaddr.sin_port ), 
-						ncprotocol->command, 
-						ncprotocol->chunkCount );
-				for ( idata = 0; idata < ncprotocol->chunkCount; ++idata )
-				{
-					printf ( " 数据%d : %s ", idata + 1, ncprotocol->dataChunk[idata]->data );
-				}
-				printf ( "\n" );
-			}
-			
-			memset ( sbuf, 0, MAX_BUF_SIZE );
-			strcpy ( sbuf, excuteCMD ( ncprotocol ));
-			if ( TCPServer_Send ( newfd, sbuf ) > 0 )
-			{
-				printf ( "回复 %s : %d\n", 
-						( char* ) inet_ntoa ( tcpServer->clientaddr.sin_addr ), ntohs ( tcpServer->clientaddr.sin_port ));
-			}
-			close ( newfd );
 		}
 	}
 	TCPServer_Close ( tcpServer );
 
 	return 0;
+}
+
+void* tFunction ( void* param )
+{
+	char* 	buf;
+	char	sbuf[MAX_BUF_SIZE];
+	param = ( struct Param* ) param;
+
+	buf = TCPServer_Recv ( param->sockfd );
+			
+	if ( buf != NULL )
+	{	
+		param->ncprotocol = NCProtocol_Parse ( buf );
+		printf ( "从 %s : %d 接收到消息\n 命令代码: %d	数据字段数: %d ", 
+				( char* ) inet_ntoa ( param->server->clientaddr.sin_addr), 
+				ntohs ( param->server->clientaddr.sin_port ), 
+				param->ncprotocol->command, 
+				param->ncprotocol->chunkCount );
+		for ( idata = 0; idata < param->ncprotocol->chunkCount; ++idata )
+		{
+			printf ( " 数据%d : %s ", idata + 1, param->ncprotocol->dataChunk[idata]->data );
+		}
+		printf ( "\n" );
+	}
+	
+	memset ( sbuf, 0, MAX_BUF_SIZE );
+	strcpy ( sbuf, excuteCMD ( param->ncprotocol ));
+	if ( TCPServer_Send ( param->sockfd, sbuf ) > 0 )
+	{
+		printf ( "回复 %s : %d -> %s\n", 
+				( char* ) inet_ntoa ( param->server->clientaddr.sin_addr ), 
+				ntohs ( param->server->clientaddr.sin_port ), 
+				sbuf );
+	}
+	TCPServet_Close ( param->sockfd );
 }
 
 char * excuteCMD ( NCProtocol *protocol )
