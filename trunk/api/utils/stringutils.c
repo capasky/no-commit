@@ -12,8 +12,10 @@
 
 /**
  * Revision Log:
- * @author				@date				@version
- * capasky				2012.12.01			1.0.0.1
+ * @author			@date				@version				@par
+ * capasky			2012.12.01			1.0.0.1					创建
+ * capasky			2012.12.19			1.0.1.0					更新N多接口实现
+ * capasky			2012.12.19			1.0.1.1					修复String_Substring的BUG
  */
 
 #include <stdlib.h>
@@ -280,14 +282,15 @@ bool	String_StartsWith(String source, String value)
  */
 String	String_Substring(String source, int start, int end)
 {
+	String result;
 	if (source.Length == 0 || source.data == NULL ||
 		start < 1 || end > source.Length)
 	{
 		return String_Create("");
 	}
-
-	source.data[end - 1] = 0;
-	return String_Create( &(source.data[start - 1]) );
+	result = String_Create( &(source.data[start - 1]) );
+	result.data[end - 1] = 0;
+	return result;
 }
 
 /**
