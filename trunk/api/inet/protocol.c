@@ -19,8 +19,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
-#include "../../base.h"
 #include "inetdef.h"
 #include "protocol.h"
 

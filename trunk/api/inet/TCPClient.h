@@ -20,7 +20,8 @@
 #ifndef TCPCLIENT_H_INCLUDE
 #define TCPCLIENT_H_INCLUDE
 
-#include "../../base.h"
+#include <stdbool.h>
+
 #include "inetdef.h"
 
 /**

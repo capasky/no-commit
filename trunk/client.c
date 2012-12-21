@@ -19,8 +19,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
-#include "base.h"
 #include "api/inet/TCPClient.h"
 #include "api/inet/protocol.h"
 #include "api/inet/inetdef.h"

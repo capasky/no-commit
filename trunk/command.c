@@ -20,8 +20,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <regex.h>
+#include <stdbool.h>
 
-#include "base.h"
 #include "command.h"
 #include "api/utils/stringutils.h"
 
