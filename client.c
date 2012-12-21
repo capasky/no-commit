@@ -61,7 +61,7 @@ int main ( int argc, char **argv )
 	printf("NoCommit1>>");
 	while( gets(cmdString) != NULL)
 	{
-		cmd = Command_TryParse(cmdString);
+		cmd = Command_TryParse(cmdString);		
 		if (CheckCommand(cmd))
 		{
 			ExecuteCommand(cmd);
