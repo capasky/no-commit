@@ -19,8 +19,8 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
-#include "../../base.h"
 #include "TCPListener.h"
 #include "inetdef.h"
 

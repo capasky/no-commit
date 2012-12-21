@@ -20,7 +20,7 @@
 #ifndef STRINGUTILS_H_INCLUDED
 #define STRINGUTILS_H_INCLUDED
 
-#include "../../base.h"
+#include <stdbool.h>
 
 typedef struct sString
 {

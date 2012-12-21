@@ -26,7 +26,7 @@
 #define DB_STATE_OPEN       1
 #define DB_STATE_CLOSE      0
 
-#include "../../base.h"
+#include <stdbool.h>
 
 typedef void (*Function) ( char *, char * );
 

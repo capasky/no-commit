@@ -18,8 +18,8 @@
  */
 
 #include <stdlib.h>
+#include <stdbool.h>
 
-#include "../../base.h"
 #include "convert.h"
 
 /**

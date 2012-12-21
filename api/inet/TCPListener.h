@@ -19,7 +19,8 @@
 #ifndef TCPSERVER_H_INCLUDE
 #define TCPSERVER_H_INCLUDE
 
-#include "../../base.h"
+#include <stdbool.h>
+
 #include "inetdef.h"
 
 /**

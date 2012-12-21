@@ -22,7 +22,7 @@
 
 #define DATA_MAX_LEN 1024
 
-#include "../../base.h"
+#include <stdbool.h>
 
 /**
  * NCData 结构体的定义

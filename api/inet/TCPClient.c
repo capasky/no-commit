@@ -21,8 +21,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
-#include "../../base.h"
 #include "TCPClient.h"
 #include "inetdef.h"
 

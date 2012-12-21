@@ -36,7 +36,7 @@
 #define CMD_QUIT        	"quit"
 #define CMD_RE          	"^(open\\s\\w+\\.\\w{2,5})|close|quit|((get|delete)\\s[0-9]+)|(set\\s[0-9]+\\s.+)$"
 
-#include "base.h"
+#include <stdbool.h>
 
 typedef struct sCommand
 {
