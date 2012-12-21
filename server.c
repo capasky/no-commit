@@ -14,6 +14,7 @@
  * @author              @date               @version
  * yellhb               2012.12.15          1.0.0.1
  * yellhb				2012.12.20			1.0.1.1
+ * yellhb				2012.12.21			1.0.1.2
  */
 
 #include <stdio.h>
@@ -108,7 +109,9 @@ void* tFunction ( void* pparam )
 		}
 		printf ( "\n" );
 	}
-	
+	else
+		return NULL;
+
 	memset ( sbuf, 0, MAX_BUF_SIZE );
 	strcpy ( sbuf, excuteCMD ( param->ncprotocol ));
 	if ( TCPServer_Send ( param->sockfd, sbuf ) > 0 )
@@ -146,7 +149,6 @@ char * excuteCMD ( NCProtocol *protocol )
 			}
 			break;
 		case CMD_CLOSE_ID:
-			printf ( "here close\n" );
 			if ( cltion != NULL )
 			{
 				if ( cltion->itemCount == 1 )
@@ -154,11 +156,13 @@ char * excuteCMD ( NCProtocol *protocol )
 					if ( Collection_Dispose ( cltion ) < 0 )
 						strcpy ( retMsg, "数据库关闭失败!" );
 					else 
+					{
+						cltion = NULL;
 						strcpy ( retMsg, "数据库关闭成功!" );
+					}
 				}
 				else if ( cltion->itemCount > 1 )
 				{
-					printf ( "cltion->count:%d\n", cltion->itemCount );
 					cltion->itemCount--;
 					strcpy ( retMsg, "数据库关闭成功!" );
 				}

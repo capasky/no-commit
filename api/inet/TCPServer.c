@@ -23,6 +23,7 @@
 #include <string.h>
 #include <sys/epoll.h>
 #include <fcntl.h>
+#include <stdbool.h>
 
 #include "TCPServer.h"
 #include "inetdef.h"
