@@ -16,13 +16,14 @@
  * @author				@date				@version
  * capasky				2012.12.07			1.0.0.1
  * yellhb				2012.12.16			1.0.1.0
+ * yellhb				2012.12.22			1.0.2.1
  */
  
 #include <tcutil.h>
 #include <tchdb.h>
 #include <string.h>
+#include <stdbool.h>
 
-#include "../../base.h"
 #include "collection.h"
 #include "dbapi.h"
 #include "../utils/stringutils.h"
@@ -38,6 +39,10 @@ Collection * Collection_Create ( char * dbFile )
     container->itemCount = 0;
     container->dbFile = strdup(dbFile);
 	container->db = createDB();
+
+	/* 开启TCHDB的读写锁  */
+	tchdbsetmutex (( TCHDB* ) container->db );
+
 	container->errorCode = openDB ( container->db, container->dbFile );
 	if ( container->errorCode == DB_OK )
 	{

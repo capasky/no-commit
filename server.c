@@ -15,6 +15,7 @@
  * yellhb               2012.12.15          1.0.0.1
  * yellhb				2012.12.20			1.0.1.1
  * yellhb				2012.12.21			1.0.1.2
+ * yellhb				2012.12.22			1.0.1.3
  */
 
 #include <stdio.h>
@@ -40,15 +41,18 @@ typedef struct PARAM
 
 char* excuteCMD ( NCProtocol *protocol );
 void* tFunction ( void* pparam );
+void* sFunction ( );
 Collection* cltion;
 
 int main ( int arg, char** argv )
 {
 	TCPServer*	tcpServer;	
 	pthread_t	tid;
+	pthread_t	stid;
 	Param*		param;
 
-	tcpServer =  TCPServer_Create ( "0.0.0.0", 5533 );
+	cltion = NULL;
+	tcpServer =  TCPServer_Create ( "192.168.1.15", 5533 );
 	
 	if ( TCPServer_Bind ( tcpServer ) == -1 )
 	{
@@ -60,6 +64,16 @@ int main ( int arg, char** argv )
 	}
 
 	TCPServer_Listen ( tcpServer );
+
+	printf ( "====================================================================\n" );
+	printf ( "= 服务器初始化完成，开始监听...									  \n" );
+	printf ( "====================================================================\n" );
+
+	/* 增加线程处理服务器端命令 */
+	if ( pthread_create ( &stid, NULL, sFunction, NULL ) != 0 )
+	{
+		fprintf ( stderr, "服务器线程创建失败! %s:%d\n", __FILE__, __LINE__ );
+	}
 
 	while ( 1 )
 	{
@@ -98,7 +112,7 @@ void* tFunction ( void* pparam )
 	if ( buf != NULL )
 	{	
 		param->ncprotocol = NCProtocol_Parse ( buf );
-		printf ( "从 %s : %d 接收到消息\n 命令代码: %d	数据字段数: %d ", 
+		printf ( "\n从 %s : %d 接收到消息\n 命令代码: %d	数据字段数: %d ", 
 				( char* ) inet_ntoa ( param->server->clientaddr.sin_addr), 
 				ntohs ( param->server->clientaddr.sin_port ), 
 				param->ncprotocol->command, 
@@ -116,12 +130,31 @@ void* tFunction ( void* pparam )
 	strcpy ( sbuf, excuteCMD ( param->ncprotocol ));
 	if ( TCPServer_Send ( param->sockfd, sbuf ) > 0 )
 	{
-		printf ( "回复 %s : %d -> %s\n", 
+		printf ( "\n回复 %s : %d -> %s\n", 
 				( char* ) inet_ntoa ( param->server->clientaddr.sin_addr ), 
 				ntohs ( param->server->clientaddr.sin_port ), 
 				sbuf );
 	}
 	TCPServer_SockClose ( param->sockfd );
+}
+
+void* sFunction ()
+{
+	char 	cmdBuf[MAX_BUF_SIZE];
+	char*	rbkBuf;
+	NCProtocol *sprotocol;
+	printf ( ">>" );
+
+	while ( gets(cmdBuf) )
+	{
+		sprotocol = NCProtocol_Parse ( cmdBuf );
+		printf ( "%d %d\n", sprotocol->command, sprotocol->chunkCount );
+		rbkBuf = excuteCMD ( sprotocol );
+		printf ( "\nserver: %s\n", rbkBuf );
+		printf ( ">>" );
+	}
+
+	return NULL;
 }
 
 char * excuteCMD ( NCProtocol *protocol )
@@ -176,6 +209,10 @@ char * excuteCMD ( NCProtocol *protocol )
 			if ( cltion != NULL )
 			{
 				retMsg = Collection_GetStr ( cltion, protocol->dataChunk[0]->data );
+			}
+			else 
+			{
+				strcpy ( retMsg, "链接已丢失!" );
 			}
 
 			if ( retMsg == NULL )
