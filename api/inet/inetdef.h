@@ -15,6 +15,7 @@
  * capasky              2012.12.13          1.0.0.1
  * yellhb				2012.12.15			1.0.0.2
  */
+ 
 #ifndef INETDEF_H_INCLUDE
 #define INETDEF_H_INCLUDE
 
@@ -26,8 +27,6 @@
 #define RECEIVE_TIMEOUT				1000
 #define SEND_BUFFER_SIZE			1024
 #define SEND_TIMEOUT				1000
-
-
 
 typedef int SOCKET;
 
