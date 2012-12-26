@@ -58,7 +58,6 @@ bool NCData_Dispose(NCData * ncd)
 	}
 	if (ncd->data != NULL)
 	{
-		printf("%s", ncd->data);
 		free(ncd->data);
 	}
 	free(ncd);

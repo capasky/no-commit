@@ -10,8 +10,8 @@ main.o: main.c collection.o
 client: client.o ncclient.o
 		gcc -o client client.o ncclient.o command.o TCPClient.o stringutils.o protocol.o
 		@printf '****************************************\n'
-		@printf '* Build 完成！
-		@printf '****************************************\n
+		@printf '* Build 完成！							 \n'
+		@printf '****************************************\n'
 
 client.o: client.c ncclient.o
 		gcc -c client.c
