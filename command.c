@@ -141,36 +141,32 @@ Command * Command_TryParse(char * cmdString)
 	char * key = NULL,
 		 * value = NULL;
 	int index = 0;
-	if ( Command_Test( cmdString ) == false )
+	int srcLen = strlen(cmdString);
+	int count = 0;
+	if (srcLen < 1)
 	{
-		return false;
+		return NULL;
 	}
 	
-	String commandString = String_Create(cmdString);
-	if (commandString.Length < 1)
+	if ( Command_Test( cmdString ) == false )
 	{
-		return false;
+		return NULL;
 	}
-	StringArrry sa = String_Split(
-						commandString,
-						String_Create(" ")
-						);
-	if (sa.Count > 1)
+	
+	string * splited = String_Split(cmdString, " ", &count);
+	
+	if (count > 1)
 	{
-		key = sa.Splited[1].data;
+		key = splited[1];
 	}
-	if (sa.Count > 2)
+	if (count > 2)
 	{
-		index = sa.Splited[0].Length + sa.Splited[1].Length + 3;
-		value = String_Substring(
-						commandString,
-						index,
-						commandString.Length
-						).data;
+		index = strlen(splited[0]) + strlen(splited[1]) + 3;
+		value = String_Substring(cmdString, index, strlen(cmdString));
 	}
 	Command * cmd = Command_Create(
-						Command_GetID(sa.Splited[0].data),
-						sa.Splited[0].data,
+						Command_GetID(splited[0]),
+						splited[0],
 						key,
 						value
 						);

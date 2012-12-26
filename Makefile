@@ -7,12 +7,17 @@ main.o: main.c collection.o
 		gcc -c main.c
 
 # client
-client: client.o TCPClient.o protocol.o api/inet/inetdef.h command.o
-		gcc -o client client.o TCPClient.o protocol.o command.o stringutils.o
+client: client.o ncclient.o
+		gcc -o client client.o ncclient.o command.o TCPClient.o stringutils.o protocol.o
+		@printf '****************************************\n'
+		@printf '* Build 完成！
+		@printf '****************************************\n
 
-client.o: client.c TCPClient.o protocol.o api/inet/inetdef.h command.o  \
-		 stringutils.o
+client.o: client.c ncclient.o
 		gcc -c client.c
+
+ncclient.o: ncclient.c command.o TCPClient.o protocol.o stringutils.o
+		gcc -c ncclient.c
 
 #server
 server: server.o TCPServer.o TCPListener.o protocol.o api/inet/inetdef.h\

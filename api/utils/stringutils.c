@@ -25,76 +25,64 @@
 
 #include "stringutils.h"
 
-
 /**
- * String_Create 使用制定字符数组创建字符串
- * @param source 源字符数组
- * @return 返回创建的字符串
- */
-String 	String_Create(char * source)
-{
-	String s;
-	s.Length = 0;
-	s.data = NULL;
-	if (source != NULL)
-	{
-		s.Length = strlen(source);
-		s.data = strdup(source);
-	}
-	return s;
-}
-
-/**
- * String_Compare 比较两个指定的 String 对象（其中忽略或考虑其大小写），并返回一个整数，指示二者在排序顺序中的相对位置。
+ * String_Compare 比较两个指定的 string 对象（其中忽略或考虑其大小写），并返回一个整数，指示二者在排序顺序中的相对位置。
  * @param string1
  * @param string2
  * @param ignoreCase
  * @return
  */
-int		String_Compare(String string1, String string2, bool ignoreCase)
+int		String_Compare(string string1, string string2, bool ignoreCase)
 {
-
+	if (ignoreCase)
+	{
+		return strcasecmp(string1, string2);
+	}
+	else
+	{
+		return strcmp(string1, string2);
+	}
 }
 
 /**
- * String_CompareOrdinal 通过计算每个字符串中相应 Char 对象的数值来比较两个指定的 String 对象。
+ * String_CompareOrdinal 通过计算每个字符串中相应 Char 对象的数值来比较两个指定的 string 对象。
  * @param string1
  * @param string2
  * @return
  */
-int		String_CompareOrdinal(String string1, String string2)
+int		String_CompareOrdinal(string string1, string string2)
 {
 
 }
 
 /**
- * String_Concat 连接 String 的两个指定实例。
+ * String_Concat 连接 string 的两个指定实例。
  * @param string1
  * @param string2
  * @return
  */
-String	String_Concat(String string1, String string2)
+string	String_Concat(string string1, string string2)
 {
 
 }
 
 /**
- * 	 返回一个值，该值指示指定的 String 对象是否出现在此字符串中。
+ * 	 返回一个值，该值指示指定的 string 对象是否出现在此字符串中。
  * @param source
  * @param token
  * @return
  */
-int	String_Contains(String source, String token)
+int	String_Contains(string source, string token)
 {
 	return 7;
 }
 
 /**
- * String_Copy 创建一个与指定的 String 具有相同值的 String 的新实例。
+ * String_Copy 创建一个与指定的 string 具有相同值的 string 的新实例。
  * @param source 源字符串
  * @return 复制到的字符串
  */
-String	String_Copy(String source)
+string	String_Copy(string source)
 {
 
 }
@@ -104,17 +92,17 @@ String	String_Copy(String source)
  * @param value 要与此实例末尾的子字符串进行比较的字符串。
  * @return
  */
-bool	String_EndsWith(String source, String value)
+bool	String_EndsWith(string source, string value)
 {
 
 }
 
 /**
- * 确定此实例是否与另一个指定的 String 对象具有相同的值。
+ * 确定此实例是否与另一个指定的 string 对象具有相同的值。
  * @param source
  * @return
  */
-bool	String_Equals(String source)
+bool	String_Equals(string source)
 {
 
 }
@@ -125,7 +113,7 @@ bool	String_Equals(String source)
  * @param args
  * @return 
  */
-String	String_Format(String format, StringArrry args)
+string	String_Format(string format, string* args)
 {
 
 }
@@ -134,7 +122,7 @@ String	String_Format(String format, StringArrry args)
  * @param source
  * @param value
  */
-int		String_IndexOf(String source, String value)
+int		String_IndexOf(string source, string value)
 {
 
 }
@@ -146,7 +134,7 @@ int		String_IndexOf(String source, String value)
  * @param value
  * @return
  */
-String	String_InsertAt(String source, int index, char value)
+string	String_InsertAt(string source, int index, char value)
 {
 
 }
@@ -158,7 +146,7 @@ String	String_InsertAt(String source, int index, char value)
  * @param value
  * @return
  */
-String String_Insert(String source, int index, String value)
+string String_Insert(string source, int index, string value)
 {
 
 }
@@ -169,7 +157,7 @@ String String_Insert(String source, int index, String value)
  * @param split
  * @return
  */
-String	String_Join(StringArrry sa, String split)
+string	String_Join(string* sa, string split)
 {
 
 }
@@ -180,7 +168,7 @@ String	String_Join(StringArrry sa, String split)
  * @param value
  * @return
  */
-int		String_LastIndexOf(String source, String value)
+int		String_LastIndexOf(string source, string value)
 {
 
 }
@@ -191,7 +179,7 @@ int		String_LastIndexOf(String source, String value)
  * @param index
  * @return
  */
-String	String_RemoveAt(String source, int index)
+string	String_RemoveAt(string source, int index)
 {
 
 }
@@ -203,7 +191,7 @@ String	String_RemoveAt(String source, int index)
  * @param end
  * @return
  */
-String	String_Remove(String source, int start, int end)
+string	String_Remove(string source, int start, int end)
 {
 
 }
@@ -215,7 +203,7 @@ String	String_Remove(String source, int start, int end)
  * @param newValue 要替换出现的所有 oldValue 的字符串。
  * @return 等效于当前字符串（除了 oldValue 的所有实例都已替换为 newValue 外）的字符串。
  */
-String String_Replace(String source, String oldValue, String newValue)
+string String_Replace(string source, string oldValue, string newValue)
 {
 
 }
@@ -226,43 +214,43 @@ String String_Replace(String source, String oldValue, String newValue)
  * @param token
  * @return
  */
-StringArrry	String_Split(String source, String token)
+string*	String_Split(string source, string token, int * count)
 {
 	int i;
 	char * src,
 		 * tmp;
-	StringArrry sa;
-	sa.Count = String_Contains(source, token) + 1;
-	sa.Splited = (String *) malloc ( sizeof(struct sString) * sa.Count);
-	src = strdup(source.data);
-	tmp = strtok(src, token.data);
+	string * splited;
+	*count = String_Contains(source, token) + 1;
+	splited = (string *) malloc ( sizeof(string) * (*count));
+	src = strdup(source);
+	tmp = strtok(src, token);
 	if (tmp == NULL)
 	{
-		free(sa.Splited);
-		sa.Splited = NULL;
-		sa.Count = 0;
-		return sa;
+		free(splited);
+		splited = NULL;
+		*count = 0;
+		return splited;
 	}
-	sa.Splited[0] = String_Create( tmp );
+	splited[0] = tmp;
 	
-	for (i = 1; i < sa.Count; i++)
+	for (i = 1; i < (*count); i++)
 	{
-		tmp = strtok(NULL,  token.data);
+		tmp = strtok(NULL,  token);
 		if (tmp != NULL)
 		{
-			sa.Splited[i] = String_Create( tmp );
+			splited[i] = tmp;
 		}
 		else
 		{
 			break;
 		}
 	}
-	if (i < sa.Count)
+	if (i < *count)
 	{
-		sa.Count = i;
+		*count = i;
 	}
 	
-	return sa;
+	return splited;
 }
 
 /**
@@ -271,7 +259,7 @@ StringArrry	String_Split(String source, String token)
  * @param value
  * @return
  */
-bool	String_StartsWith(String source, String value)
+bool	String_StartsWith(string source, string value)
 {
 
 }
@@ -283,22 +271,18 @@ bool	String_StartsWith(String source, String value)
  * @param end
  * @return
  */
-String	String_Substring(String source, int start, int end)
+string	String_Substring(string source, int start, int end)
 {
-	String result;
-	if (source.Length == 0 || source.data == NULL ||
-		start < 1 || end > source.Length ||
+	string result = NULL;
+	int srcLen = strlen(source);
+	if ( srcLen == 0 || source == NULL ||
+		start < 1 || end > srcLen ||
 		start > end)
 	{
-		return String_Create("");
+		return NULL;
 	}
-	result = String_Create( &(source.data[start - 1]) );
-	result.data[end - start + 1] = 0;
-	
-	if (result.data == NULL)
-	{
-		printf("NULL\n");
-	}
+	result = strdup( &(source[start - 1]) );
+	result[end - start + 1] = 0;
 	
 	return result;
 }
@@ -308,7 +292,7 @@ String	String_Substring(String source, int start, int end)
  * @param source
  * @return
  */
-String	String_ToLower(String source)
+string	String_ToLower(string source)
 {
 
 }
@@ -318,37 +302,37 @@ String	String_ToLower(String source)
  * @param source
  * @return
  */
-String	String_ToUpper(String source)
+string	String_ToUpper(string source)
 {
 
 }
 
 /**
- * 	 从当前 String 对象移除所有前导空白字符和尾部空白字符。
+ * 	 从当前 string 对象移除所有前导空白字符和尾部空白字符。
  * @param source
  * @return
  */
-String	String_Trim(String source)
+string	String_Trim(string source)
 {
 
 }
 
 /**
- * 	 从当前 String 对象移除数组中指定的一组字符的所有尾部匹配项。
+ * 	 从当前 string 对象移除数组中指定的一组字符的所有尾部匹配项。
  * @param source
  * @return
  */
-String	String_TrimEnd(String source)
+string	String_TrimEnd(string source)
 {
 
 }
 
 /**
- * 	 从当前 String 对象移除数组中指定的一组字符的所有前导匹配项。
+ * 	 从当前 string 对象移除数组中指定的一组字符的所有前导匹配项。
  * @param source
  * @return
  */
-String	String_TrimStart(String source)
+string	String_TrimStart(string source)
 {
 
 }
