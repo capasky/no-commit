@@ -74,7 +74,24 @@ string	String_Concat(string string1, string string2)
  */
 int	String_Contains(string source, string token)
 {
-	return 7;
+	int cnt = 0;
+	int len = strlen(token);
+	char * p = source;
+	do
+	{
+		p = strstr(p, token);
+		cnt++;
+		if (p != NULL)
+		{
+			p += len;
+		}
+		else
+		{
+			break;
+		}
+	} while (true);
+	
+	return cnt;
 }
 
 /**

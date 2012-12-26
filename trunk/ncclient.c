@@ -33,19 +33,61 @@
 #include "ncclient.h"
 
 /**
+ * Server_Create
+ * @param id
+ * @param name
+ * @param ip
+ * @param port
+ * @return
+ */
+Server * Server_Create(int id, string name, string ip, int port)
+{
+	Server * server = (Server *)malloc(sizeof(struct sServer));
+	server->ServerID 	= id;
+	strcpy(server->ServerName, name);
+	strcpy(server->IPAddress, ip);
+	server->Port 		= port;
+	return server;
+}
+
+/**
+ * Server_GetServer 获取服务器节点信息
+ * @param ncc
+ * @param node
+ * @return 返回Server对象的指针
+ */
+Server * Server_GetServer(NCClient * ncc, int node)
+{
+	if (node > ncc->ServerCount )
+	{
+		node = 0;
+	}
+	return ncc->ServerList[node];
+}
+
+/**
  * NCClient_Create 创建NCClient结构体对象
  * @return 成功则返回创建的NCClient对象的指针，否则返回NULL
  */
 NCClient * NCClient_Create()
 {
+	int i;
 	NCClient * ncc = (NCClient *) malloc( sizeof(struct sNCClient) );
 	if (ncc != NULL)
 	{
 		ncc->Active 		= false;
-		ncc->DBFile 		= NULL;
+		memset(ncc->DBFile, 0, sizeof(ncc->DBFile));
 		ncc->Connected 		= false;
-		ncc->Client 		= NULL;
-		ncc->ServerList 	= NULL;
+		ncc->Client 		= TCPClient_Create( IP_ADDR_SERVER, IP_PORT_SERVER );
+		ncc->ServerCount	= 0;
+		
+		for (i = 0; i < MAX_SERVER_NODE; i++)
+		{
+			ncc->ServerList[i] = NULL;
+		}
+		
+		ncc->CurrentServer	= NULL;
+		ncc->DefaultServer	= Server_Create(0, "default", IP_ADDR_SERVER, IP_PORT_SERVER);
 		ncc->CurrentCommand = NULL;
 		ncc->CurrentNCP		= NULL;
 	}
@@ -60,6 +102,39 @@ NCClient * NCClient_Create()
 void NCClient_UpdateServer(NCClient * ncc)
 {
 	//TODO:
+	int i;
+	for (i = 0; i < 3; i++)
+	{
+		ncc->ServerList[i] = Server_Create(i, "Server", "127.0.0.1", 5533 + i);
+		ncc->ServerCount++;
+	}
+	
+	return;
+}
+
+/**
+ * 根据当前操作对象选择分布式数据库服务器节点
+ * @param ncc NCClient对象指针
+ */
+void NCClient_SelectServer(NCClient * ncc)
+{
+	int node = 0;
+	if (ncc->CurrentCommand != NULL)
+	{
+		if (ncc->CurrentCommand->CommandID == CMD_DEL_ID ||
+			ncc->CurrentCommand->CommandID == CMD_GET_ID ||
+			ncc->CurrentCommand->CommandID == CMD_SET_ID)
+		{
+			node = atoi(ncc->CurrentCommand->Key);
+			node %= 3;
+			ncc->CurrentServer = Server_GetServer(ncc, node);
+		}
+	}
+	if (ncc->CurrentServer == NULL)
+	{
+		ncc->CurrentServer = ncc->DefaultServer;
+	}
+
 	return;
 }
 
@@ -99,12 +174,12 @@ void NCClient_CheckCommand(NCClient * ncc)
 
 void NCClient_Run(NCClient * ncc)
 {
-	char cmdString[1024];
+	char cmdString[128];
+	NCClient_UpdateServer(ncc);
 	printf("NoCommit>>");
 	while( gets(cmdString) != NULL)
 	{
 		NCClient_Preprocess(ncc, cmdString);
-		printf("%d\n", ncc->CommandValid);
 		if (ncc->CommandValid)
 		{
 			NCClient_PrepareData(ncc);
@@ -112,8 +187,9 @@ void NCClient_Run(NCClient * ncc)
 		}
 		if (ncc->Active)
 		{
+			printf("%s\n", ncc->DBFile);
 			printf("%s::%s>>",
-				ncc->Client->RemoteAddress, ncc->DBFile);
+				ncc->CurrentServer->ServerName, ncc->DBFile);
 		}
 		else
 		{
@@ -127,7 +203,6 @@ void NCClient_Run(NCClient * ncc)
 
 void NCClient_Preprocess(NCClient * ncc, string cmdString)
 {
-	NCClient_UpdateServer(ncc);
 	ncc->CurrentCommand = Command_TryParse(cmdString);
 	NCClient_CheckCommand(ncc);
 	return;
@@ -173,13 +248,55 @@ void NCClient_PrepareData(NCClient * ncc)
 
 void NCClient_Execute(NCClient * ncc)
 {
+	int i;
+	if (ncc->CurrentCommand->CommandID == CMD_DEL_ID ||
+		ncc->CurrentCommand->CommandID == CMD_GET_ID ||
+		ncc->CurrentCommand->CommandID == CMD_SET_ID)
+	{
+		//选择服务器并建立连接
+		NCClient_SelectServer(ncc);
+		NCClient_ExecRemote(ncc);
+	}
+	else
+	{
+		for (i = 0; i < ncc->ServerCount; i++)
+		{
+			ncc->CurrentServer = ncc->ServerList[i];
+			NCClient_ExecRemote(ncc);
+		}
+		if(ncc->CurrentCommand->CommandID == CMD_OPEN_ID)
+		{
+			strcpy(ncc->DBFile, ncc->CurrentCommand->Key);
+			ncc->Active = true;
+		}
+		if ( ncc->CurrentCommand->CommandID == CMD_CLOSE_ID )
+		{
+			ncc->Active = false;
+		}
+	}
+	return;
+}
+
+/**
+ * NCClient_ExecRemote 执行远程命令
+ * @param ncc NCClient对象指针
+ */
+void NCClient_ExecRemote(NCClient * ncc)
+{
 	int mlen = 0;
 	char buffer[1024];
 	char * data;
 	if (ncc->Client == NULL)
 	{
-		ncc->Client = TCPClient_Create( IP_ADDR_SERVER, IP_PORT_SERVER );
+		ncc->Client = TCPClient_Create(IP_ADDR_SERVER, IP_PORT_SERVER);
 	}
+	strcpy(ncc->Client->RemoteAddress, ncc->CurrentServer->IPAddress);
+	ncc->Client->RemotePort = ncc->CurrentServer->Port;
+	printf("当前连接服务器：\n服务器名：%s\n服务器IP：%s\n服务器端口：%d\n",
+				ncc->CurrentServer->ServerName,
+				ncc->CurrentServer->IPAddress,
+				ncc->CurrentServer->Port
+	);
 	if ( !(ncc->Connected) )
 	{
 		ncc->Connected = TCPClient_Connect(ncc->Client);
@@ -189,34 +306,32 @@ void NCClient_Execute(NCClient * ncc)
 			return;
 		}
 	}
+	//封装数据
 	data = NCProtocol_Encapsul(ncc->CurrentNCP);
-	
+	//发送
 	TCPClient_Send( ncc->Client, data, ncc->CurrentNCP->totalLength );
-	
+	//接受服务器回复
 	mlen = TCPClient_Receive( ncc->Client, buffer, sizeof(buffer) );
 	
 	ncc->Connected = false;
 	
 	buffer[mlen] = 0;
 	printf("服务器：%s\n", buffer);
+	printf("*************************************************\n");
 
 	free(data);
-	
-	if ( ncc->CurrentCommand->CommandID == CMD_OPEN_ID )
-	{
-		ncc->DBFile = strdup(ncc->CurrentCommand->Key);
-		ncc->Active = true;
-	}
-	if ( ncc->CurrentCommand->CommandID == CMD_CLOSE_ID )
-	{
-		TCPClient_Close( ncc->Client );
-		ncc->Active = false;
-	}
+	TCPClient_Close(ncc->Client);
 	return;
 }
 
+
+/**
+ * NCClient_Clean 客户端清理
+ * @param ncc NCClient对象指针
+ */
 void NCClient_Clean(NCClient * ncc)
 {
+	fflush(stdin);
 	NCProtocol_Dispose(ncc->CurrentNCP);
 	ncc->CurrentNCP = NULL;
 	return;
