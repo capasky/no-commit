@@ -20,10 +20,14 @@
 #include <stdbool.h>
 
 #include "inet/protocol.h"
-#include "utils/stringutils.h"
 #include "../command.h"
 
-NCProtocol * Server_ParseCommandToProtocol(string cmdString)
+/**
+ * Server_ParseCommandToProtocol 将命令解析之后封装为NCProtocol对象
+ * @param cmdString 命令字符串
+ * @return 命令合法解析成功返回新建的NCProtocol对象，否则返回NULL
+ */
+NCProtocol * Server_ParseCommandToProtocol(char * cmdString)
 {
 	NCData ** 	ncData;
 	int 		count = 0;
