@@ -169,7 +169,7 @@ SOCKET TCPServer_Accept ( TCPServer *tcpServer )
 		{
 			struct sockaddr_in clientaddr;
 			socklen_t addr_len = sizeof ( struct sockaddr );
-			int newfd = accept ( tcpServer->sockfd, ( struct sockaddr* )&clientaddr, &addr_len );
+			int newfd = accept ( tcpServer->sockfd, ( struct sockaddr* )&(tcpServer->clientaddr), &addr_len );
 			if ( newfd == -1 )
 			{
 				fprintf ( stderr, "Accept ERROR, %s:%d", __FILE__, __LINE__ );
