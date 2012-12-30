@@ -28,6 +28,7 @@
 #include "api/inet/protocol.h"
 #include "api/inet/TCPListener.h"
 #include "api/data/collection.h"
+#include "api/servercmd.h"
 #include "command.h"
 
 #define MAX_BUF_SIZE		1024
@@ -52,7 +53,7 @@ int main ( int arg, char** argv )
 	Param*		param;
 
 	cltion = NULL;
-	tcpServer =  TCPServer_Create ( "192.168.1.15", 5533 );
+	tcpServer =  TCPServer_Create ( "192.168.1.3", 5534 );
 	
 	if ( TCPServer_Bind ( tcpServer ) == -1 )
 	{
@@ -66,7 +67,7 @@ int main ( int arg, char** argv )
 	TCPServer_Listen ( tcpServer );
 
 	printf ( "====================================================================\n" );
-	printf ( "= 服务器初始化完成，开始监听...									  \n" );
+	printf ( "=                  服务器初始化完成，开始监听...                   =\n" );
 	printf ( "====================================================================\n" );
 
 	/* 增加线程处理服务器端命令 */
@@ -86,9 +87,8 @@ int main ( int arg, char** argv )
 		{
 			param = ( Param* ) malloc ( sizeof ( Param ));
 			param->sockfd = newfd;
-			param->server = tcpServer;
 			param->server = ( TCPServer* ) malloc ( sizeof ( TCPServer ));
-			memcpy ( &param->server, &tcpServer, sizeof ( TCPServer ));
+			memcpy ( &param->server, &tcpServer, sizeof ( tcpServer ));
 			if ( pthread_create ( &tid, NULL, tFunction, ( void* )param ) != 0 )
 			{
 				fprintf ( stderr, "线程创建失败,%s:%d\n", __FILE__, __LINE__ );
@@ -140,20 +140,21 @@ void* tFunction ( void* pparam )
 
 void* sFunction ()
 {
-	char 	cmdBuf[MAX_BUF_SIZE];
-	char*	rbkBuf;
+	char* 		cmdBuf;
+	char*		rbkBuf;
 	NCProtocol *sprotocol;
 	printf ( ">>" );
 
+	cmdBuf = ( char* ) malloc ( sizeof ( char ) * MAX_BUF_SIZE );
 	while ( gets(cmdBuf) )
 	{
-		sprotocol = NCProtocol_Parse ( cmdBuf );
-		printf ( "%d %d\n", sprotocol->command, sprotocol->chunkCount );
+		sprotocol = Server_ParseCommandToProtocol ( cmdBuf );
 		rbkBuf = excuteCMD ( sprotocol );
 		printf ( "\nserver: %s\n", rbkBuf );
 		printf ( ">>" );
 	}
-
+	free ( rbkBuf );
+	free ( sprotocol );
 	return NULL;
 }
 
