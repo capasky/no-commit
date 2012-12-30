@@ -21,15 +21,18 @@ ncclient.o: ncclient.c command.o TCPClient.o protocol.o stringutils.o
 
 #server
 server: server.o TCPServer.o TCPListener.o protocol.o api/inet/inetdef.h\
-		collection.o dbapi.o convert.o command.o
+		collection.o dbapi.o convert.o command.o servercmd.o stringutils.o
 		gcc -o server server.o TCPListener.o TCPServer.o protocol.o api/inet/inetdef.h\
-		 collection.o dbapi.o convert.o -ltokyocabinet
+		 collection.o dbapi.o convert.o command.o servercmd.o stringutils.o -ltokyocabinet
 
 server.o: server.c
 		gcc -c server.c
 
 command.o: command.c stringutils.o 
 		gcc -c command.c
+#api
+servercmd.o : api/servercmd.c protocol.o command.o
+		gcc -c api/servercmd.c
 
 #api.data
 collection.o: api/data/collection.c dbapi.o convert.o 
