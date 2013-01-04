@@ -142,4 +142,10 @@ void NCClient_ExecRemote(NCClient * ncc);
  */
 void NCClient_Clean(NCClient * ncc);
 
+/**
+ *
+ *
+ */
+int NCClient_Updater();
+
 #endif

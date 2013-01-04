@@ -103,11 +103,12 @@ void NCClient_UpdateServer(NCClient * ncc)
 {
 	//TODO:
 	int i;
-	for (i = 0; i < 3; i++)
-	{
-		ncc->ServerList[i] = Server_Create(i, "Server", "127.0.0.1", 5533 + i);
-		ncc->ServerCount++;
-	}
+
+	ncc->ServerList[0] = Server_Create(i, "Server1", "192.168.1.3", 5533);
+	ncc->ServerList[1] = Server_Create(i, "Server2", "192.168.1.3", 5534);
+	ncc->ServerList[2] = Server_Create(i, "Server3", "127.0.0.1", 5535);
+	
+	ncc->ServerCount+=3;
 	
 	return;
 }
@@ -187,7 +188,6 @@ void NCClient_Run(NCClient * ncc)
 		}
 		if (ncc->Active)
 		{
-			printf("%s\n", ncc->DBFile);
 			printf("%s::%s>>",
 				ncc->CurrentServer->ServerName, ncc->DBFile);
 		}
