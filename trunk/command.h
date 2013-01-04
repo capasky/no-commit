@@ -19,14 +19,24 @@
 #ifndef COMMAND_H_INCLUDE
 #define COMMAND_H_INCLUDE
 
-#define CMD_MAX_LEN     	64
-#define CMD_OPEN_ID        	1
-#define CMD_CLOSE_ID       	2
-#define CMD_GET_ID         	3
-#define CMD_SET_ID         	4
-#define CMD_DEL_ID         	5
-#define CMD_QUIT_ID        	6
-#define CMD_MESSAGE_ID		102
+#define CMD_MAX_LEN     			64
+
+#define CMD_OPEN_ID        			1
+#define CMD_CLOSE_ID       			2
+#define CMD_GET_ID      		   	3
+#define CMD_SET_ID      		   	4
+#define CMD_DEL_ID     		    	5
+#define CMD_QUIT_ID     		   	6
+#define CMD_MESSAGE_ID				999
+
+#define	CMD_CLIENT_REQ_NODE_LIST		1000
+#define	CMD_CLIENT_REQ_NODE_CHANGE		1001
+
+#define	CMD_SERVER_REQ_NODE_ALIVE		2000
+#define CMD_SERVER_REQ_NODE_START		2010
+#define CMD_SERVER_REQ_NODE_CLOSE		2011
+#define CMD_SERVER_REP_NODE_LIST		2012
+#define CMD_SERVER_REP_NODE_KEEP		2013
 
 #define CMD_OPEN        	"open"
 #define CMD_CLOSE       	"close"
