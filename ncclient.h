@@ -34,11 +34,10 @@
 
 #include "api/utils/stringutils.h"
 
-#define IP_ADDR_SERVER  	"127.0.0.1"
+#define IP_ADDR_SERVER  	"192.168.130.34"
 #define IP_PORT_SERVER  	5533
 
 #define IP_ADDR_CLIENT		"127.0.0.1"
-
 #define IP_ADDR_LOCAL		"127.0.0.1"
 
 typedef struct sNCClient

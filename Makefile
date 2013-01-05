@@ -21,9 +21,9 @@ ncclient.o: ncclient.c command.o TCPClient.o protocol.o stringutils.o updater.o 
 		gcc -c ncclient.c
 
 #server
-server: server.o TCPServer.o TCPListener.o protocol.o api/inet/inetdef.h\
+server: server.o TCPServer.o TCPClient.o TCPListener.o protocol.o api/inet/inetdef.h\
 		collection.o dbapi.o convert.o command.o servercmd.o stringutils.o
-		gcc -o server server.o TCPListener.o TCPServer.o protocol.o api/inet/inetdef.h\
+		gcc -o server server.o TCPListener.o TCPClient.o  TCPServer.o protocol.o api/inet/inetdef.h\
 		 collection.o dbapi.o convert.o command.o servercmd.o stringutils.o -ltokyocabinet
 		@printf '****************************************\n'
 		@printf '* Build 完成！							 \n'
@@ -35,14 +35,17 @@ server.o: server.c
 command.o: command.c stringutils.o 
 		gcc -c command.c
 #masterserver
-masterserver: server.o TCPServer.o TCPListener.o protocol.o api/inet/inetdef.h\
-		collection.o dbapi.o convert.o command.o servercmd.o stringutils.o
-		gcc -o server server.o TCPListener.o TCPServer.o protocol.o api/inet/inetdef.h\
-		 collection.o dbapi.o convert.o command.o servercmd.o stringutils.o -ltokyocabinet
+masterserver: masterserver.o TCPServer.o TCPClient.o TCPListener.o protocol.o api/inet/inetdef.h\
+		collection.o dbapi.o convert.o command.o servercmd.o stringutils.o 
+		gcc -o masterserver masterserver.o TCPListener.o TCPClient.o TCPServer.o protocol.o api/inet/inetdef.h\
+		 collection.o dbapi.o convert.o command.o servercmd.o servernode.o stringutils.o -ltokyocabinet
 		@printf '****************************************\n'
 		@printf '* Build 完成！							 \n'
 		@printf '****************************************\n'
-
+		
+masterserver.o: masterServ.c TCPServer.o TCPClient.o protocol.o collection.o servercmd.o servernode.o
+		gcc -c masterServ.c -o masterserver.o
+		
 #api
 servercmd.o : api/servercmd.c protocol.o command.o
 		gcc -c api/servercmd.c

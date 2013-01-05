@@ -146,6 +146,7 @@ NCProtocol * NCProtocol_Parse(char * data)
     NCData **    dataChunk;
 
     command = (int)(*data);
+    printf("CMD:%d\n", command);
     data += sizeof(int);
 
     //totalLength = (int)(*data);
@@ -190,7 +191,7 @@ char * NCProtocol_Encapsul(NCProtocol * ncp)
         return NULL;
     }
     p = data;
-    memcpy(p, &ncp->command, sizeof(int) * 3);
+    memcpy(p, ncp, sizeof(int) * 3);
     p += sizeof(int) * 3;
     for (i = 0; i < ncp->chunkCount; i++)
     {

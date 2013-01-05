@@ -19,6 +19,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "../inet/inetdef.h"
 #include "../inet/protocol.h"
@@ -149,28 +150,47 @@ bool Updater_UpdateServer(Updater * updater)
 						CMD_CLIENT_REQ_NODE_LIST,
 						1,
 						ncData);
-	toSend = NCProtocol_Encapsul(ncp); 
 	if (updater->Client == NULL)
 	{
 		updater->Client = TCPClient_Create(
 						updater->UpdateServer,
 						updater->UpdateServerPort);
 	}
-	TCPClient_Connect(updater->Client);
-	TCPClient_Send(updater->Client, toSend, sizeof(toSend));
-	TCPClient_Receive(updater->Client, buf, sizeof(buf));
+	if ( !(TCPClient_Connect(updater->Client)) )
+	{
+		fprintf(stderr, "\nTCP连接出错，错误代码：%d\n", 1);
+		return false;
+	}
+	toSend = NCProtocol_Encapsul(ncp); 
+	printf("发送消息编号：%d\n", ncp->command);
+	printf("发送数据数量：%d\n", ncp->chunkCount);
+	printf("发送数据总长度：%d\n", ncp->totalLength);
+	TCPClient_Send(updater->Client, toSend, ncp->totalLength);
+	
+	NCProtocol_Dispose(ncp);
+	ncp = NCProtocol_Parse(toSend);
+	printf("发送消息编号：%d\n", ncp->command);
+	printf("发送数据数量：%d\n", ncp->chunkCount);
+	printf("发送数据总长度：%d\n", ncp->totalLength);
+	
 	NCProtocol_Dispose(ncp);
 	free(toSend);
+
+	TCPClient_Receive(updater->Client, buf, sizeof(buf));
 	ncp = NCProtocol_Parse(buf);
 	if (ncp != NULL)
 	{
+		printf("收到消息编号：%d\n", ncp->command);
 		/* 如果服务器返回的为数据节点信息的列表，则更新 */
 		if (ncp->command == CMD_SERVER_REP_NODE_LIST)
 		{
 			memcpy(&(updater->Version), ncp->dataChunk[i]->data, sizeof(int));
+			printf("列表Verion:%d\n", updater->Version);
+			printf("更新服务器列表:\n");
 			for (i = 1; i < ncp->chunkCount; i++)
 			{
 				node = ServerNode_Parse(ncp->dataChunk[i]->data);
+				printf("服务器%2d: %s\n", i, node->Name);
 				result &= Updater_UpdateNode(updater, node);
 			}
 			updater->DefaultNode = updater->ServerList[0];
