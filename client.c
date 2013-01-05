@@ -18,10 +18,10 @@
  */
 
 #include "ncclient.h"
-
+NCClient * NCC;
 int main()
 {
-	NCClient * ncc = NCClient_Create();
-	NCClient_Run(ncc);
+	NCC = NCClient_Create();
+	NCClient_Run(NCC);
 	return 0;
 }

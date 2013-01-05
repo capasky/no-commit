@@ -39,10 +39,9 @@
 
 /**
  * NCClient_Create 创建NCClient结构体对象
- * @param updater Updater对象指针
  * @return 成功则返回创建的NCClient对象的指针，否则返回NULL
  */
-NCClient * NCClient_Create(Updater updater)
+NCClient * NCClient_Create()
 {
 	int i;
 	NCClient * ncc = (NCClient *) malloc( sizeof(struct sNCClient) );
@@ -52,7 +51,7 @@ NCClient * NCClient_Create(Updater updater)
 		memset(ncc->DBFile, 0, sizeof(ncc->DBFile));
 		ncc->Connected 		= false;
 		ncc->Client 		= TCPClient_Create( IP_ADDR_SERVER, IP_PORT_SERVER );
-		ncc->ServerUpdater	= updater;
+		ncc->ServerUpdater	= NULL;
 		ncc->CurrentCommand = NULL;
 		ncc->CurrentNCP		= NULL;
 		pthread_mutex_init(&(ncc->UpdaterMutex), NULL);
@@ -68,7 +67,7 @@ NCClient * NCClient_Create(Updater updater)
 void NCClient_UpdateServer(NCClient * ncc)
 {
 	int i;
-	i = pthread_create(&(ncc->UpdaterThread), &NCClient_Updater, (void *)ncc);
+	i = pthread_create(&(ncc->UpdaterThread), NULL, &NCClient_Updater, (void *)ncc);
 	if (i != 0)
 	{
 		fprintf ( stderr, "更新线程创建失败,%s:%d\n", __FILE__, __LINE__ );
@@ -83,14 +82,13 @@ void NCClient_UpdateServer(NCClient * ncc)
 void NCClient_SelectServer(NCClient * ncc)
 {
 	int node = 0;
-	pthread_mutex_lock(ncc->UpdaterMutex);
 	if (ncc->CurrentCommand != NULL)
 	{
 		if (ncc->CurrentCommand->CommandID == CMD_DEL_ID ||
 			ncc->CurrentCommand->CommandID == CMD_GET_ID ||
 			ncc->CurrentCommand->CommandID == CMD_SET_ID)
 		{
-			node = ncc->CurrentCommand->Key;
+			node = atoi(ncc->CurrentCommand->Key);
 			ncc->CurrentServer = Updater_GetServer( ncc->ServerUpdater, node);
 		}
 	}
@@ -98,7 +96,6 @@ void NCClient_SelectServer(NCClient * ncc)
 	{
 		ncc->CurrentServer = ncc->ServerUpdater->DefaultNode;
 	}
-	pthread_mutex_unlock(ncc->UpdaterMutex);
 	return;
 }
 
@@ -152,7 +149,7 @@ void NCClient_Run(NCClient * ncc)
 		if (ncc->Active)
 		{
 			printf("%s::%s>>",
-				ncc->CurrentServer->ServerName, ncc->DBFile);
+				ncc->CurrentServer->Name, ncc->DBFile);
 		}
 		else
 		{
@@ -222,8 +219,6 @@ void NCClient_Execute(NCClient * ncc)
 	}
 	else
 	{
-		/* 对updater的操作加锁 */
-		pthread_mutex_lock(&(ncc->UpdaterMutex));
 		for (i = 0; i < ncc->ServerUpdater->NodeCount; i++)
 		{
 			if (ncc->ServerUpdater->ServerList[i]->State == SERVER_NODE_STATE_UPDATED)
@@ -232,8 +227,6 @@ void NCClient_Execute(NCClient * ncc)
 				NCClient_ExecRemote(ncc);
 			}
 		}
-		/* 对updater的操作解锁 */
-		pthread_mutex_unlock(&(ncc->UpdaterMutex));
 		
 		if(ncc->CurrentCommand->CommandID == CMD_OPEN_ID)
 		{
@@ -307,26 +300,24 @@ void NCClient_Clean(NCClient * ncc)
 	return;
 }
 
-
-
 /**
  * NCClient_Updater 更新线程处理函数
  * @return 执行结束返回0
  */
-int NCClient_Updater(void * ncc)
+void * NCClient_Updater(void * ncc)
 {
-	ncc = (NCClient *)ncc;
+	NCClient * nc = (NCClient *)(ncc);
 	Updater * updater = Updater_Create(
 				IP_ADDR_SERVER,
 				IP_PORT_SERVER);
-	ncc->ServerUpdater = updater;
+	nc->ServerUpdater = updater;
 	while (1)
 	{
-		pthread_mutex_lock(&(ncc->UpdaterMutex));
+		pthread_mutex_lock(&(nc->UpdaterMutex));
 		Updater_UpdateServer(updater);
-		pthread_mutex_unlock(&(ncc->UpdaterMutex));
+		pthread_mutex_unlock(&(nc->UpdaterMutex));
 		sleep(60);
 	}
 	
-	return 0;
+	return NULL;
 }
