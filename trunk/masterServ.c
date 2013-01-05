@@ -26,7 +26,6 @@
 #include "api/inet/TCPServer.h"
 #include "api/inet/protocol.h"
 #include "api/inet/TCPClient.h"
-#include "api/data/collection.h"
 #include "api/servercmd.h"
 #include "api/core/servernode.h"
 #include "command.h"
@@ -49,8 +48,8 @@ typedef struct PARAM
 
 char* excuteCMD ( NCProtocol *protocol, TCPServer* server );
 void* tFunction ( void* pparam );
-void* sFunction ( void* dataNode );
-char* getLocalIP();
+void* sFunction ();
+char* getLocalIP ();
 int			version = 0;
 int 		servAmount = 0;
 DataNode*	servNodes;
@@ -76,14 +75,14 @@ int main ( int arg, char** argv )
 	}
 
 	TCPServer_Listen ( tcpServer );
-	servNodes = (DataNode*) malloc ( sizeof ( DataNode ));
+	servNodes = NULL;
 
 	printf ( "====================================================================\n" );
 	printf ( "=            节点配置服务器初始化完成，开始监听...                 =\n" );
 	printf ( "====================================================================\n" );
 
 	/* 创建线程每5秒对所有节点轮寻 */
-	if ( pthread_create ( &stid, NULL, sFunction, (void*)&servNodes ) != 0 )
+	if ( pthread_create ( &stid, NULL, sFunction, NULL ) != 0 )
 	{
 		fprintf ( stderr, "服务器线程创建失败! %s:%d\n", __FILE__, __LINE__ );
 	}
@@ -126,22 +125,24 @@ void* tFunction ( void* pparam )
 	if ( buf != NULL )
 	{	
 		param->ncprotocol = NCProtocol_Parse ( buf );
-		printf ( "\n从 %s : %d 接收到消息\n 命令代码: %d	数据字段数: %d ", 
+		printf ( "\n从 %s : %d 接收到消息\n 命令代码: %d	数据字段数: %d \n", 
 				( char* ) inet_ntoa ( param->server->clientaddr.sin_addr), 
 				ntohs ( param->server->clientaddr.sin_port ), 
 				param->ncprotocol->command, 
 				param->ncprotocol->chunkCount );
-		for ( idata = 0; idata < param->ncprotocol->chunkCount; ++idata )
-		{
-			printf ( " 数据%d : %s ", idata + 1, param->ncprotocol->dataChunk[idata]->data );
-		}
-		printf ( "\n" );
 	}
 	else
 		return NULL;
 
 	memset ( sbuf, 0, MAX_BUF_SIZE );
 	strcpy ( sbuf, excuteCMD ( param->ncprotocol, param->server ));
+
+	if ( sbuf == NULL )
+	{
+		TCPServer_SockClose ( param->sockfd );
+		return NULL;
+	}
+
 	if ( TCPServer_Send ( param->sockfd, sbuf ) > 0 )
 	{
 		printf ( "\n回复 %s : %d\n", 
@@ -151,39 +152,57 @@ void* tFunction ( void* pparam )
 	TCPServer_SockClose ( param->sockfd );
 }
 
-void* sFunction ( void* dataNode )
+void* sFunction ( )
 {
-	DataNode* 	sNodes = *(( DataNode** ) dataNode);
-	DataNode* 	pNode = NULL;
-	DataNode*	rNode = NULL;
-	DataNode*	dNode = NULL;
-	TCPClient*	client;
-
 	while ( 1 )
 	{
-		if ( sNodes != NULL )
+		DataNode* 	pNode = servNodes;
+		DataNode*	rNode = NULL;
+		DataNode*	dNode = NULL;
+		TCPClient*	client;
+		if ( servNodes != NULL )
 		{
-			pNode = sNodes->next;
-			rNode = sNodes;
-		}
-
-		while ( pNode != NULL )
-		{
-			client = TCPClient_Create ( pNode->node.IPAddress, pNode->node.Port );
-			if ( TCPClient_Connect ( client ) == 0 )
+			printf ( "--------------------------------------------------\n" );
+			printf ( "数据服务器列表：                                  \n" );
+			while ( pNode != NULL )
 			{
-				rNode->next = pNode->next;
-				dNode = pNode;
-				pNode = pNode->next;
-				free ( dNode );
-			}	
-			else
-			{
-				rNode = rNode->next;
-				pNode = pNode->next;
+				client = TCPClient_Create ( pNode->node.IPAddress, pNode->node.Port );
+				if ( TCPClient_Connect ( client ) == 0 )
+				{
+					printf ( "服务器下线\n" );
+					if ( rNode != NULL || ( rNode == NULL && pNode->next != NULL ))
+					{
+						if ( rNode != NULL )
+							rNode->next = pNode->next;
+						else
+							servNodes = pNode->next;
+						dNode = pNode;
+						pNode = pNode->next;
+						free ( dNode );
+					}
+					else
+					{
+						free ( servNodes );
+						servNodes = NULL;
+						pNode = NULL;
+					}
+				}	
+				else
+				{
+					printf ( "数据服务器%d： %s %d \n", pNode->node.ID, pNode->node.IPAddress, pNode->node.Port );
+					rNode = pNode;
+					pNode = pNode->next;
+				}
+				TCPClient_Close ( client );
+				free ( client );
 			}
-			TCPClient_Close ( client );
-			free ( client );
+			printf ( "-------------------------------------------------\n" );
+		}
+		else
+		{
+			printf ( "-------------------------------------------------\n" );
+			printf ( "数据服务器列表：暂时没有数据服务器上线           \n" );
+			printf ( "-------------------------------------------------\n" );
 		}
 		sleep ( 5 );
 	}
@@ -197,7 +216,7 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 	DataNode*	sNode = NULL;
 	DataNode*	rNode = NULL;
 	char		data[4];
-	int			i;
+	int			i, tmpv;
 	char* 		retMsg = ( char* ) malloc ( MAX_BUF_SIZE * sizeof ( char ));
 	memset ( retMsg, 0, MAX_BUF_SIZE );
 	
@@ -205,12 +224,20 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 	switch ( protocol->command )
 	{
 		case CMD_CLIENT_REQ_NODE_LIST:
+			memcpy ( &tmpv, protocol->dataChunk[0]->data, 4 );
+			if ( tmpv == version )
+			{
+				return NULL;
+			}
+
 			ncData = ( NCData** ) malloc ( sizeof ( struct sNCData* ) * ( servAmount + 1 ));
 			memcpy ( data, &(version), sizeof ( data ));
 			ncData[0] = NCData_Create ( sizeof ( int ), data );
 			
-			if ( servNodes != NULL )
-				pNode = servNodes->next;
+			if ( servNodes == NULL )
+				return NULL;
+			else
+				pNode = servNodes;
 
 			i = 0;
 			while ( pNode )
@@ -223,30 +250,63 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 			retMsg = NCProtocol_Encapsul ( ncp );
 			break;
 		case CMD_SERVER_REQ_NODE_START:
-			if ( servNodes != NULL )
-				pNode = servNodes->next;
-			rNode = servNodes;
-			sNode = servNodes;
-
-			while ( pNode )
+			memcpy ( &tmpv, protocol->dataChunk[1]->data, 4 );
+			printf ( "新服务器加入列表:ID:%d IP:%s Port:%d\n", 
+					servAmount + 1, protocol->dataChunk[0]->data, tmpv );
+			if ( servNodes == NULL )
 			{
-				if ( pNode->node.DataCount > sNode->node.DataCount )
+				sNode = NULL;
+			}
+			else
+			{
+				pNode = servNodes;
+				rNode = servNodes;
+				sNode = servNodes;
+			
+				while ( pNode != NULL )
 				{
-					sNode = rNode;
+					if ( pNode->node.DataCount > sNode->node.DataCount )
+					{
+						sNode = rNode;
+					}
+					if ( rNode != servNodes )
+						rNode = pNode;
+					pNode = pNode->next;
 				}
-				rNode = rNode->next;
-				pNode = pNode->next;
 			}
 			
 			rNode = ( DataNode* ) malloc ( sizeof ( DataNode ));
-			rNode->node.ID = servAmount + 1;
-			strcpy ( rNode->node.IPAddress, server->IPAddress );
-			rNode->node.Port = server->Port;
+			rNode->node.ID = ( servAmount + 1 ) % 65536;
+			strcpy ( rNode->node.IPAddress, protocol->dataChunk[0]->data );
+			rNode->node.Port = tmpv ;
 			rNode->node.DataCount = 0;
-			rNode->node.StartKey = sNode->next->node.StartKey;
-			rNode->node.EndKey = sNode->next->node.EndKey / 2;
-			rNode->next = sNode->next;
-			sNode->next = rNode;
+			if ( sNode == NULL )
+			{
+				rNode->node.StartKey = 0;
+				rNode->node.EndKey = 0x7FFFFFFF - 1;
+				rNode->next = NULL;
+				servNodes = rNode;
+			}
+			else
+			{
+				if ( sNode->next != NULL )
+				{
+					rNode->node.StartKey = sNode->next->node.StartKey;
+					rNode->node.EndKey = sNode->next->node.StartKey - 1;
+					sNode->next->node.StartKey = sNode->next->node.EndKey / 2;
+					rNode->next = sNode->next;
+					sNode->next = rNode;
+				}
+				else
+				{
+					rNode->node.StartKey = sNode->node.EndKey / 2;
+					rNode->node.EndKey = 0x7FFFFFFF - 1;
+					sNode->node.EndKey = rNode->node.StartKey - 1;
+					sNode->next = rNode;
+					rNode->next = NULL;
+				}
+			};
+			servAmount = ( servAmount + 1 ) % 1024;
 			break;
 		defalut:
 			retMsg = NULL;
