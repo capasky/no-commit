@@ -19,24 +19,28 @@
 #ifndef COMMAND_H_INCLUDE
 #define COMMAND_H_INCLUDE
 
-#define CMD_MAX_LEN     			64
+#define CMD_MAX_LEN     				64			/* 命令字符串的最大长度 */
 
-#define CMD_OPEN_ID        			1
-#define CMD_CLOSE_ID       			2
-#define CMD_GET_ID      		   	3
-#define CMD_SET_ID      		   	4
-#define CMD_DEL_ID     		    	5
-#define CMD_QUIT_ID     		   	6
-#define CMD_MESSAGE_ID				999
+#define CMD_VALID						0			/* 非法命令 */
 
-#define	CMD_CLIENT_REQ_NODE_LIST		1000
-#define	CMD_CLIENT_REQ_NODE_CHANGE		1001
+#define CMD_OPEN_ID						1			/* 打开数据库 */
+#define CMD_CLOSE_ID					2			/* 关闭数据库 */
+#define CMD_GET_ID						3			/* 获取数据 */
+#define CMD_SET_ID						4			/* 设置数据 */
+#define CMD_DEL_ID						5			/* 删除数据 */
+#define CMD_QUIT_ID						6			/* 退出命令 */
+#define CMD_MESSAGE_ID					999			/*  */
 
-#define	CMD_SERVER_REQ_NODE_ALIVE		2000
-#define CMD_SERVER_REQ_NODE_START		2010
-#define CMD_SERVER_REQ_NODE_CLOSE		2011
-#define CMD_SERVER_REP_NODE_LIST		2012
-#define CMD_SERVER_REP_NODE_KEEP		2013
+#define	CMD_CLIENT_REQ_NODE_LIST		1000		/* 客户端请求数据服务器节点列表命令 */
+#define	CMD_CLIENT_REQ_NODE_CHANGE		1001		/* 客户端查询Master服务器是否需要更新服务器列表命令 */
+
+#define	CMD_SERVER_REQ_NODE_PEND		2000		/* Master服务器查询数据服务器节点状态命令 */
+#define CMD_SERVER_REP_NODE_LIST		2001		/* Master服务器向客户端返回服务器列表命令 */
+#define CMD_SERVER_REP_NODE_KEEP		2002		/* Master服务器向客户端返回服务器状态保持命令 */
+
+#define CMD_SERVER_REQ_NODE_START		2010		/* 节点服务器启动命令 */
+#define CMD_SERVER_REQ_NODE_CLOSE		2011		/* 节点服务器关闭命令 */
+#define CMD_SERVER_REP_NODE_ALIVE		2012		/* 节点服务器回复Master服务器本节点为活动命令 */
 
 #define CMD_OPEN        	"open"
 #define CMD_CLOSE       	"close"

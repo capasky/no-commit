@@ -21,8 +21,13 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
+#include <unistd.h>
 
 #include "command.h"
+
+#include "api/core/servernode.h"
+#include "api/core/updater.h"
 
 #include "api/utils/stringutils.h"
 
@@ -33,43 +38,11 @@
 #include "ncclient.h"
 
 /**
- * Server_Create
- * @param id
- * @param name
- * @param ip
- * @param port
- * @return
- */
-Server * Server_Create(int id, string name, string ip, int port)
-{
-	Server * server = (Server *)malloc(sizeof(struct sServer));
-	server->ServerID 	= id;
-	strcpy(server->ServerName, name);
-	strcpy(server->IPAddress, ip);
-	server->Port 		= port;
-	return server;
-}
-
-/**
- * Server_GetServer 获取服务器节点信息
- * @param ncc
- * @param node
- * @return 返回Server对象的指针
- */
-Server * Server_GetServer(NCClient * ncc, int node)
-{
-	if (node > ncc->ServerCount )
-	{
-		node = 0;
-	}
-	return ncc->ServerList[node];
-}
-
-/**
  * NCClient_Create 创建NCClient结构体对象
+ * @param updater Updater对象指针
  * @return 成功则返回创建的NCClient对象的指针，否则返回NULL
  */
-NCClient * NCClient_Create()
+NCClient * NCClient_Create(Updater updater)
 {
 	int i;
 	NCClient * ncc = (NCClient *) malloc( sizeof(struct sNCClient) );
@@ -79,17 +52,10 @@ NCClient * NCClient_Create()
 		memset(ncc->DBFile, 0, sizeof(ncc->DBFile));
 		ncc->Connected 		= false;
 		ncc->Client 		= TCPClient_Create( IP_ADDR_SERVER, IP_PORT_SERVER );
-		ncc->ServerCount	= 0;
-		
-		for (i = 0; i < MAX_SERVER_NODE; i++)
-		{
-			ncc->ServerList[i] = NULL;
-		}
-		
-		ncc->CurrentServer	= NULL;
-		ncc->DefaultServer	= Server_Create(0, "default", IP_ADDR_SERVER, IP_PORT_SERVER);
+		ncc->ServerUpdater	= updater;
 		ncc->CurrentCommand = NULL;
 		ncc->CurrentNCP		= NULL;
+		pthread_mutex_init(&(ncc->UpdaterMutex), NULL);
 	}
 	return ncc;
 }
@@ -101,15 +67,12 @@ NCClient * NCClient_Create()
  */
 void NCClient_UpdateServer(NCClient * ncc)
 {
-	//TODO:
 	int i;
-
-	ncc->ServerList[0] = Server_Create(i, "Server1", "192.168.1.3", 5533);
-	ncc->ServerList[1] = Server_Create(i, "Server2", "192.168.1.3", 5534);
-	ncc->ServerList[2] = Server_Create(i, "Server3", "127.0.0.1", 5535);
-	
-	ncc->ServerCount+=3;
-	
+	i = pthread_create(&(ncc->UpdaterThread), &NCClient_Updater, (void *)ncc);
+	if (i != 0)
+	{
+		fprintf ( stderr, "更新线程创建失败,%s:%d\n", __FILE__, __LINE__ );
+	}
 	return;
 }
 
@@ -120,22 +83,22 @@ void NCClient_UpdateServer(NCClient * ncc)
 void NCClient_SelectServer(NCClient * ncc)
 {
 	int node = 0;
+	pthread_mutex_lock(ncc->UpdaterMutex);
 	if (ncc->CurrentCommand != NULL)
 	{
 		if (ncc->CurrentCommand->CommandID == CMD_DEL_ID ||
 			ncc->CurrentCommand->CommandID == CMD_GET_ID ||
 			ncc->CurrentCommand->CommandID == CMD_SET_ID)
 		{
-			node = atoi(ncc->CurrentCommand->Key);
-			node %= 3;
-			ncc->CurrentServer = Server_GetServer(ncc, node);
+			node = ncc->CurrentCommand->Key;
+			ncc->CurrentServer = Updater_GetServer( ncc->ServerUpdater, node);
 		}
 	}
 	if (ncc->CurrentServer == NULL)
 	{
-		ncc->CurrentServer = ncc->DefaultServer;
+		ncc->CurrentServer = ncc->ServerUpdater->DefaultNode;
 	}
-
+	pthread_mutex_unlock(ncc->UpdaterMutex);
 	return;
 }
 
@@ -259,11 +222,19 @@ void NCClient_Execute(NCClient * ncc)
 	}
 	else
 	{
-		for (i = 0; i < ncc->ServerCount; i++)
+		/* 对updater的操作加锁 */
+		pthread_mutex_lock(&(ncc->UpdaterMutex));
+		for (i = 0; i < ncc->ServerUpdater->NodeCount; i++)
 		{
-			ncc->CurrentServer = ncc->ServerList[i];
-			NCClient_ExecRemote(ncc);
+			if (ncc->ServerUpdater->ServerList[i]->State == SERVER_NODE_STATE_UPDATED)
+			{
+				ncc->CurrentServer = ncc->ServerUpdater->ServerList[i];
+				NCClient_ExecRemote(ncc);
+			}
 		}
+		/* 对updater的操作解锁 */
+		pthread_mutex_unlock(&(ncc->UpdaterMutex));
+		
 		if(ncc->CurrentCommand->CommandID == CMD_OPEN_ID)
 		{
 			strcpy(ncc->DBFile, ncc->CurrentCommand->Key);
@@ -293,7 +264,7 @@ void NCClient_ExecRemote(NCClient * ncc)
 	strcpy(ncc->Client->RemoteAddress, ncc->CurrentServer->IPAddress);
 	ncc->Client->RemotePort = ncc->CurrentServer->Port;
 	printf("当前连接服务器：\n服务器名：%s\n服务器IP：%s\n服务器端口：%d\n",
-				ncc->CurrentServer->ServerName,
+				ncc->CurrentServer->Name,
 				ncc->CurrentServer->IPAddress,
 				ncc->CurrentServer->Port
 	);
@@ -324,7 +295,6 @@ void NCClient_ExecRemote(NCClient * ncc)
 	return;
 }
 
-
 /**
  * NCClient_Clean 客户端清理
  * @param ncc NCClient对象指针
@@ -335,4 +305,28 @@ void NCClient_Clean(NCClient * ncc)
 	NCProtocol_Dispose(ncc->CurrentNCP);
 	ncc->CurrentNCP = NULL;
 	return;
+}
+
+
+
+/**
+ * NCClient_Updater 更新线程处理函数
+ * @return 执行结束返回0
+ */
+int NCClient_Updater(void * ncc)
+{
+	ncc = (NCClient *)ncc;
+	Updater * updater = Updater_Create(
+				IP_ADDR_SERVER,
+				IP_PORT_SERVER);
+	ncc->ServerUpdater = updater;
+	while (1)
+	{
+		pthread_mutex_lock(&(ncc->UpdaterMutex));
+		Updater_UpdateServer(updater);
+		pthread_mutex_unlock(&(ncc->UpdaterMutex));
+		sleep(60);
+	}
+	
+	return 0;
 }

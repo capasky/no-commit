@@ -22,11 +22,13 @@
 
 #include "command.h"
 
-#include "api/utils/stringutils.h"
+#include "api/core/servernode.h"
 
 #include "api/inet/inetdef.h"
 #include "api/inet/TCPClient.h"
 #include "api/inet/protocol.h"
+
+#include "api/utils/stringutils.h"
 
 #define IP_ADDR_SERVER  	"127.0.0.1"
 #define IP_PORT_SERVER  	5533
@@ -35,55 +37,27 @@
 
 #define IP_ADDR_LOCAL		"127.0.0.1"
 
-#define MAX_SERVER_NODE		10
-
-typedef struct sServer
-{
-	int 	ServerID;
-	char 	ServerName[10];
-	char 	IPAddress[INET_IPADDR_STRING_LEN];
-	int		Port;
-} Server;
-
 typedef struct sNCClient
 {
-	bool 		Active;
-	char		DBFile[32];
-	bool 		Connected;
-	TCPClient * Client;
-	int 		ServerCount;
-	Server *	ServerList[10];
-	Server *	CurrentServer;
-	Server *	DefaultServer;
-	Command *	CurrentCommand;
-	bool		CommandValid;
-	NCProtocol* CurrentNCP;
+	bool 			Active;
+	char			DBFile[32];
+	bool 			Connected;
+	TCPClient * 	Client;
+	Updater *		ServerUpdater;
+	ServerNode *	CurrentServer;
+	Command *		CurrentCommand;
+	bool			CommandValid;
+	NCProtocol* 	CurrentNCP;
+	pthread_mutex_t	UpdaterMutex;
+	pthread_t		UpdaterThread;
 } NCClient;
-
-/**
- * Server_Create 
- * @param id
- * @param name
- * @param ip
- * @param port
- * @return
- */
-Server * Server_Create(int id, string name, string ip, int port);
-
-/**
- * Server_GetServer 获取服务器节点信息
- * @param ncc
- * @param node
- * @return 返回Server对象的指针
- */
-Server * Server_GetServer(NCClient * ncc, int node);
 
 
 /**
  * NCClient_Create 创建NCClient结构体对象
  * @return 成功则返回创建的NCClient对象的指针，否则返回NULL
  */
-NCClient * NCClient_Create();
+NCClient * NCClient_Create(Updater * updater);
 
 /**
  * NCClient_UpdateServer 更新服务器列表，用与分布式系统
@@ -143,9 +117,9 @@ void NCClient_ExecRemote(NCClient * ncc);
 void NCClient_Clean(NCClient * ncc);
 
 /**
- *
- *
+ * NCClient_Updater 更新线程处理函数
+ * @return 执行结束返回0
  */
-int NCClient_Updater();
+int NCClient_Updater(void * ncc);
 
 #endif

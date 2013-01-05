@@ -17,19 +17,25 @@
  * capasky              2012.12.29          1.0.0.0
  */
 
-#ifndef NCUPDATER_H_INCLUDE
-#define NCCLIENT_H_INCLUDE
+#ifndef SERVERNODE_H_INCLUDE
+#define SERVERNODE_H_INCLUDE
 
 #include <stdbool.h>
-#include "api/inet/inetdef.h"
+#include "../inet/inetdef.h"
 
-#define MAX_SERVER_NAME_LEN		64
-#define	MAX_SERVER_UPDATE_TAG	65536
+#define MAX_SERVER_NAME_LEN			64
+#define	MAX_SERVER_UPDATE_TAG		65536
 
+#define SERVER_NODE_STATE_NULL		0
+#define SERVER_NODE_STATE_NORMAL	1
+#define SERVER_NODE_STATE_UPDATED	2
+#define SERVER_NODE_STATE_DELETED	4
+#define SERVER_NODE_STATE_DISABLED	8
 
 typedef struct sServerNode
 {
 	int 	ID;
+	int		State;
 	char 	Name[MAX_SERVER_NAME_LEN];
 	char 	IPAddress[INET_IPADDR_STRING_LEN];
 	int		Port;
@@ -60,5 +66,12 @@ ServerNode * ServerNode_Create(int id, char * name, char * ip, int port,
  * @return 成功则返回true， 否则返回false
  */
 bool ServerNode_Dispose(ServerNode * sn);
+
+/**
+ * ServerNode_Parse 将字节串解析为ServerNode对象
+ * @param data 字节串指针
+ * @return 成功则返回ServerNode对象指针，否则返回NULL
+ */
+ServerNode * ServerNode_Parse(char * data);
 
 #endif
