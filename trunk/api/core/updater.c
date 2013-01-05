@@ -161,24 +161,14 @@ bool Updater_UpdateServer(Updater * updater)
 		fprintf(stderr, "\nTCP连接出错，错误代码：%d\n", 1);
 		return false;
 	}
-	toSend = NCProtocol_Encapsul(ncp); 
-	printf("发送消息编号：%d\n", ncp->command);
-	printf("发送数据数量：%d\n", ncp->chunkCount);
-	printf("发送数据总长度：%d\n", ncp->totalLength);
-	memcpy(&i, ncp, sizeof(int));
-	printf("PPPPPP:%d\n", i);
+	toSend = NCProtocol_Encapsul(ncp); 	
 	TCPClient_Send(updater->Client, toSend, ncp->totalLength);
-	
-	NCProtocol_Dispose(ncp);
-	ncp = NCProtocol_Parse(toSend);
-	printf("发送消息编号：%d\n", ncp->command);
-	printf("发送数据数量：%d\n", ncp->chunkCount);
-	printf("发送数据总长度：%d\n", ncp->totalLength);
 	
 	NCProtocol_Dispose(ncp);
 	free(toSend);
 
 	TCPClient_Receive(updater->Client, buf, sizeof(buf));
+	
 	ncp = NCProtocol_Parse(buf);
 	if (ncp != NULL)
 	{
