@@ -18,7 +18,9 @@
  */
 
 #include "ncclient.h"
+
 NCClient * NCC;
+
 int main()
 {
 	NCC = NCClient_Create();

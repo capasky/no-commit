@@ -313,9 +313,11 @@ void * NCClient_Updater(void * ncc)
 	nc->ServerUpdater = updater;
 	while (1)
 	{
+		printf("\n执行更新线程中。。。\n");
 		pthread_mutex_lock(&(nc->UpdaterMutex));
 		Updater_UpdateServer(updater);
 		pthread_mutex_unlock(&(nc->UpdaterMutex));
+		printf("\n执行完毕。\n");
 		sleep(60);
 	}
 	
