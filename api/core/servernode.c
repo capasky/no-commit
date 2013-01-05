@@ -48,6 +48,7 @@ ServerNode * ServerNode_Create(int id, char * name, char * ip, int port,
 	
 	sn = (ServerNode *)malloc(sizeof(struct sServerNode));
 	sn->ID = id;
+	sn->State = SERVER_NODE_STATE_NULL;
 	sn->Port = port;
 	
 	if (strlen(name) > MAX_SERVER_NAME_LEN - 1)
@@ -73,4 +74,39 @@ bool ServerNode_Dispose(ServerNode * sn)
 		return true;
 	}
 	return false;	
+}
+
+/**
+ * ServerNode_Parse 将字节串解析为ServerNode对象
+ * @param data 字节串指针
+ * @return 成功则返回ServerNode对象指针，否则返回NULL
+ */
+ServerNode * ServerNode_Parse(char * data)
+{
+	int 	id;
+	char 	name[MAX_SERVER_NAME_LEN];
+	char 	ip[INET_IPADDR_STRING_LEN];
+	int 	port;
+	int 	dataCount;
+	int 	updateTag;
+	int 	start;
+	int 	end;
+
+	ServerNode * sn = (ServerNode *)malloc(sizeof(struct sServerNode));
+
+	memcpy(sn, data, sizeof(struct sServerNode));
+
+	return sn;
+}
+
+/**
+ * ServerNode_ToByte 将ServerNode对象转换为字节序列
+ * @param node ServerNode对象指针
+ * @return 返回转换后字节序列的指针
+ */
+char * ServerNode_ToByte(ServerNode * node)
+{
+	char * data = (char *)malloc(sizeof(char) * sizeof(struct sServerNode));
+	memcpy(data, node, sizeof(struct sServerNode));
+	return data;
 }

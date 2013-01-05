@@ -19,7 +19,6 @@
 
 #include "ncclient.h"
 
-
 int main()
 {
 	NCClient * ncc = NCClient_Create();
