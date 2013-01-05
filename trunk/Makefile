@@ -9,7 +9,7 @@ main.o: main.c collection.o
 # client
 client: client.o ncclient.o
 		gcc -o client client.o ncclient.o command.o TCPClient.o stringutils.o protocol.o\
-		updater.o servernode.o
+		updater.o servernode.o -lpthread
 		@printf '****************************************\n'
 		@printf '* Build 完成！							 \n'
 		@printf '****************************************\n'
@@ -17,7 +17,7 @@ client: client.o ncclient.o
 client.o: client.c ncclient.o
 		gcc -c client.c
 
-ncclient.o: ncclient.c command.o TCPClient.o protocol.o stringutils.o
+ncclient.o: ncclient.c command.o TCPClient.o protocol.o stringutils.o updater.o servernode.o
 		gcc -c ncclient.c
 
 #server
