@@ -41,6 +41,8 @@
 #define CMD_SERVER_REQ_NODE_START		30		/* 节点服务器启动命令 */
 #define CMD_SERVER_REQ_NODE_CLOSE		31		/* 节点服务器关闭命令 */
 #define CMD_SERVER_REP_NODE_ALIVE		32		/* 节点服务器回复Master服务器本节点为活动命令 */
+#define CMD_SERVER_REP_SUCCESS			50		/* 节点服务器执行命令成功 */
+#define CMD_SERVER_REP_FAILED			51		/* 节点服务器执行命令失败 */
 
 #define CMD_OPEN        	"open"
 #define CMD_CLOSE       	"close"
