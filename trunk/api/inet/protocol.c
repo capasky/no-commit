@@ -40,8 +40,8 @@ NCData * NCData_Create(int length, char * data)
     }
 
     ncd->length = length;
-    ncd->data = strdup(data);
-
+    ncd->data = (char *)malloc(sizeof(char) * length);
+	memcpy(ncd->data, data, length);
     return ncd;
 }
 
@@ -139,37 +139,35 @@ NCProtocol * NCProtocol_Parse(char * data)
 {
     int         i           = 0;
     int         len         = 0;
-    char *      dat         = NULL;
+    char *		p			= NULL;
     int         command     = 0;
     //int         totalLength = 0;
     int         chunkCount  = 0;
     NCData **    dataChunk;
-
-    command = (int)(*data);
-    printf("CMD:%d\n", command);
-    data += sizeof(int);
+	p = data;
+	
+	memcpy(&command, p, sizeof(int));
+    p += sizeof(int);
 
     //totalLength = (int)(*data);
-    data += sizeof(int);
+    p += sizeof(int);
 
-    chunkCount = (int)(*data);
-    data += sizeof(int);
+	memcpy(&chunkCount, p, sizeof(int));
+    p += sizeof(int);
 
     dataChunk = (NCData **)malloc(sizeof(struct sNCData *) * chunkCount);
 
     for(i = 0; i < chunkCount; i++)
     {
-        len = (int)(*data);
-        data += sizeof(int);
-        dat = strndup(data, len);
-        dataChunk[i] = NCData_Create(len, dat);
+        memcpy(&len, p, sizeof(int));
+        p += sizeof(int);
+        dataChunk[i] = NCData_Create(len, p);
         if (dataChunk[i] == NULL)
         {
-            free(dat);
             free(dataChunk);
             return NULL;
         }
-        data += len;
+        p += len;
     }
     return NCProtocol_Create( command, chunkCount, dataChunk );
 }

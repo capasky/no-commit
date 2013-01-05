@@ -165,6 +165,8 @@ bool Updater_UpdateServer(Updater * updater)
 	printf("发送消息编号：%d\n", ncp->command);
 	printf("发送数据数量：%d\n", ncp->chunkCount);
 	printf("发送数据总长度：%d\n", ncp->totalLength);
+	memcpy(&i, ncp, sizeof(int));
+	printf("PPPPPP:%d\n", i);
 	TCPClient_Send(updater->Client, toSend, ncp->totalLength);
 	
 	NCProtocol_Dispose(ncp);
