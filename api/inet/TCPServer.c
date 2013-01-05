@@ -77,9 +77,9 @@ TCPServer * TCPServer_Create ( char *ipAddress, int port )
   */
 int TCPServer_Bind ( TCPServer *tcpServer )
 {
-	int opt = SO_REUSEADDR;
-	setsockopt ( tcpServer->sockfd, SOL_SOCKET, 
-			SO_REUSEADDR, &opt, sizeof ( SO_REUSEADDR ));
+	//int opt = SO_REUSEADDR;
+	//setsockopt ( tcpServer->sockfd, SOL_SOCKET, 
+	//		SO_REUSEADDR, &opt, sizeof ( SO_REUSEADDR ));
 	return  bind ( tcpServer->sockfd, 
 				 ( struct sockaddr* ) &(tcpServer->addr), 
 				 sizeof ( struct sockaddr ));

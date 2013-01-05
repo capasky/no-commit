@@ -16,17 +16,21 @@
  * yellhb				2012.12.20			1.0.1.1
  * yellhb				2012.12.21			1.0.1.2
  * yellhb				2012.12.22			1.0.1.3
+ * yellhb				2013.1.5			1.0.2.1
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include <string.h>
+#include <sys/ioctl.h>
+#include <net/if.h>
 #include <pthread.h>
 
 #include "api/inet/TCPServer.h"
 #include "api/inet/protocol.h"
 #include "api/inet/TCPListener.h"
+#include "api/inet/TCPClient.h"
 #include "api/data/collection.h"
 #include "api/servercmd.h"
 #include "command.h"
@@ -40,9 +44,11 @@ typedef struct PARAM
 	NCProtocol*	ncprotocol;
 } Param;
 
-char* excuteCMD ( NCProtocol *protocol );
+int excuteCMD ( NCProtocol *protocol, char** retMsg );
 void* tFunction ( void* pparam );
 void* sFunction ( );
+char* getLocalIP ( );
+void conMaster ( TCPServer* server );
 Collection* cltion;
 
 int main ( int arg, char** argv )
@@ -51,23 +57,28 @@ int main ( int arg, char** argv )
 	pthread_t	tid;
 	pthread_t	stid;
 	Param*		param;
+	char*		servIP;
 
 	cltion = NULL;
-	tcpServer =  TCPServer_Create ( "192.168.1.3", 5534 );
+	servIP = getLocalIP();
+	tcpServer =  TCPServer_Create ( servIP, rand() % 50000 + 1024 );
 	
-	if ( TCPServer_Bind ( tcpServer ) == -1 )
+	while ( TCPServer_Bind ( tcpServer ) == -1 )
 	{
-		fprintf ( stderr, "绑定错误, %s : %d,", __FILE__, __LINE__ );
-		fprintf ( stderr, "%s : %d\n", ( char* ) inet_ntoa ( tcpServer->addr.sin_addr), 
+		fprintf ( stderr, "尝试绑定 %s : %d 失败\n", ( char* ) inet_ntoa ( tcpServer->addr.sin_addr), 
 				ntohs ( tcpServer->addr.sin_port ));
 		TCPServer_Close ( tcpServer );
-		return -1;
+		free ( tcpServer );
+		tcpServer = TCPServer_Create ( servIP, rand() % 50000 + 1024 );
 	}
-
+	
+	conMaster ( tcpServer );
 	TCPServer_Listen ( tcpServer );
 
 	printf ( "====================================================================\n" );
 	printf ( "=                  服务器初始化完成，开始监听...                   =\n" );
+	printf ( "=                  当前服务器地址:%15s                  =\n",(char*) inet_ntoa ( tcpServer->addr.sin_addr ));
+	printf ( "=                  当前端口:%5d                                  =\n", ntohs ( tcpServer->addr.sin_port ));
 	printf ( "====================================================================\n" );
 
 	/* 增加线程处理服务器端命令 */
@@ -93,7 +104,8 @@ int main ( int arg, char** argv )
 			{
 				fprintf ( stderr, "线程创建失败,%s:%d\n", __FILE__, __LINE__ );
 			}
-		}		
+		}
+		sleep ( 1 );
 	}
 	TCPServer_Close ( tcpServer );
 
@@ -102,10 +114,13 @@ int main ( int arg, char** argv )
 
 void* tFunction ( void* pparam )
 {
-	char* 	buf;
-	char	sbuf[MAX_BUF_SIZE];
-	Param*	param = ( Param* )pparam;
-	int 	idata;
+	char* 		buf;
+	char*		sbuf;
+	Param*		param = ( Param* )pparam;
+	NCProtocol*	ncp;
+	NCData**	ncData;
+	int 		idata;
+	int 		flag;
 
 	buf = TCPServer_Recv ( param->sockfd );
 			
@@ -124,11 +139,21 @@ void* tFunction ( void* pparam )
 		printf ( "\n" );
 	}
 	else
+	{
+		pthread_detach ( pthread_self() );
 		return NULL;
+	}
 
-	memset ( sbuf, 0, MAX_BUF_SIZE );
-	strcpy ( sbuf, excuteCMD ( param->ncprotocol ));
-	if ( TCPServer_Send ( param->sockfd, sbuf ) > 0 )
+	flag = excuteCMD ( param->ncprotocol, &sbuf );
+	ncData = ( NCData** ) malloc ( sizeof ( struct sNCData* ));
+	ncData[0] = NCData_Create ( sizeof ( sbuf ), sbuf );
+	
+	if ( flag == 1 )
+		ncp = NCProtocol_Create ( CMD_SERVER_REP_SUCCESS, 1, ncData );
+	else
+		ncp = NCProtocol_Create ( CMD_SERVER_REP_FAILED, 1, ncData );
+	buf = NCProtocol_Encapsul ( ncp );
+	if ( TCPServer_Send ( param->sockfd, buf ) > 0 )
 	{
 		printf ( "\n回复 %s : %d -> %s\n", 
 				( char* ) inet_ntoa ( param->server->clientaddr.sin_addr ), 
@@ -136,6 +161,7 @@ void* tFunction ( void* pparam )
 				sbuf );
 	}
 	TCPServer_SockClose ( param->sockfd );
+	pthread_detach ( pthread_self() );
 }
 
 void* sFunction ()
@@ -149,20 +175,23 @@ void* sFunction ()
 	while ( gets(cmdBuf) )
 	{
 		sprotocol = Server_ParseCommandToProtocol ( cmdBuf );
-		rbkBuf = excuteCMD ( sprotocol );
+		excuteCMD ( sprotocol, &rbkBuf );
 		printf ( "\nserver: %s\n", rbkBuf );
 		printf ( ">>" );
 	}
 	free ( rbkBuf );
 	free ( sprotocol );
+	pthread_detach ( pthread_self() );
 	return NULL;
 }
 
-char * excuteCMD ( NCProtocol *protocol )
+int excuteCMD ( NCProtocol *protocol, char** retMsg )
 {
-	char *retMsg = ( char* ) malloc ( MAX_BUF_SIZE * sizeof ( char ));
-	memset ( retMsg, 0, MAX_BUF_SIZE );
+	int flag;
+	*retMsg = ( char* ) malloc ( MAX_BUF_SIZE * sizeof ( char ));
+	memset ( *retMsg, 0, MAX_BUF_SIZE );
 
+	flag = 0;
 	switch ( protocol->command )
 	{
 		case CMD_OPEN_ID:
@@ -171,15 +200,17 @@ char * excuteCMD ( NCProtocol *protocol )
 				if (( cltion =  Collection_Create ( protocol->dataChunk[0]->data )) != NULL )
 				{
 					cltion->itemCount = 1;
-					strcpy ( retMsg, "数据库打开正常！" );
+					strcpy ( *retMsg, "数据库打开正常！" );
+					flag = 1;
 				}
 				else 
-					strcpy ( retMsg, "数据库打开失败！" );
+					strcpy ( *retMsg, "数据库打开失败！" );
 			}
 			else 
 			{
 				cltion->itemCount++;
-				strcpy ( retMsg, "数据库已经打开！" );
+				strcpy ( *retMsg, "数据库已经打开！" );
+				flag = 1;
 			}
 			break;
 		case CMD_CLOSE_ID:
@@ -188,56 +219,121 @@ char * excuteCMD ( NCProtocol *protocol )
 				if ( cltion->itemCount == 1 )
 				{
 					if ( Collection_Dispose ( cltion ) < 0 )
-						strcpy ( retMsg, "数据库关闭失败!" );
+						strcpy ( *retMsg, "数据库关闭失败!" );
 					else 
 					{
 						cltion = NULL;
-						strcpy ( retMsg, "数据库关闭成功!" );
+						strcpy ( *retMsg, "数据库关闭成功!" );
+						flag = 1;
 					}
 				}
 				else if ( cltion->itemCount > 1 )
 				{
 					cltion->itemCount--;
-					strcpy ( retMsg, "数据库关闭成功!" );
+					strcpy ( *retMsg, "数据库关闭成功!" );
+					flag = 1;
 				}
 			}
 			else 
 			{
-				strcpy ( retMsg, "数据库关闭失败！" );
+				strcpy ( *retMsg, "数据库关闭失败！" );
 			}
 			break;
 		case CMD_GET_ID:
 			if ( cltion != NULL )
 			{
-				retMsg = Collection_GetStr ( cltion, protocol->dataChunk[0]->data );
+				*retMsg = Collection_GetStr ( cltion, protocol->dataChunk[0]->data );
+				flag = 1;
 			}
 			else 
 			{
-				strcpy ( retMsg, "链接已丢失!" );
+				strcpy ( *retMsg, "链接已丢失!" );
 			}
 
-			if ( retMsg == NULL )
+			if ( *retMsg == NULL )
 			{
-				retMsg = ( char* ) malloc ( MAX_BUF_SIZE * sizeof ( char ));
-				strcpy ( retMsg, "数据查找失败：无此数据！");
+				*retMsg = ( char* ) malloc ( MAX_BUF_SIZE * sizeof ( char ));
+				strcpy ( *retMsg, "数据查找失败：无此数据！");
+				flag = 0;
 			}
 			break;
 		case CMD_SET_ID:
 			if ( cltion == NULL || Collection_AddStr ( cltion, 
 						protocol->dataChunk[0]->data, protocol->dataChunk[1]->data ) < 0 )
-				strcpy ( retMsg, "数据插入失败！" );
+				strcpy ( *retMsg, "数据插入失败！" );
 			else 
-				strcpy ( retMsg, "数据插入成功！" );
+			{
+				flag = 1;
+				strcpy ( *retMsg, "数据插入成功！" );
+			}
 			break;
 		case CMD_DEL_ID:
 			if ( cltion == NULL || Collection_RemoveStr ( cltion, protocol->dataChunk[0]->data ) < 0 )
-				strcpy ( retMsg, "数据删除失败！" );
+				strcpy ( *retMsg, "数据删除失败！" );
 			else
-				strcpy ( retMsg, "数据删除成功！" );
+			{
+				flag = 1;
+				strcpy ( *retMsg, "数据删除成功！" );
+			}
 			break;
 		defalut:
-			strcpy ( retMsg, "无效命令!" );
+			strcpy ( *retMsg, "无效命令!" );
 	}
 	
-	return retMsg;
+	return flag;
+}
+
+char* getLocalIP()
+{
+	char* ip = NULL;
+	int fd, interface, retn = 0;
+	struct ifreq buf[8];
+	struct ifconf ifc;
+
+	if (( fd = socket ( AF_INET, SOCK_STREAM, 0 )) >= 0 )
+	{
+		ifc.ifc_len = sizeof ( buf );
+		ifc.ifc_buf = (caddr_t)buf;
+		if ( !ioctl ( fd, SIOCGIFCONF, (char*)&ifc ))
+		{
+			interface = ifc.ifc_len / sizeof ( struct ifreq );
+
+			while ( interface-- > 0 )
+			{
+				if ( !ioctl ( fd, SIOCGIFCONF, (char*)&buf[interface] ))
+				{
+					ip = inet_ntoa (((struct sockaddr_in*)(&buf[interface].ifr_addr))->sin_addr );
+					break;
+				}
+			}
+		}
+		close ( fd );
+	}
+
+	return ip;
+}
+
+void conMaster ( TCPServer* server )
+{
+	TCPClient* 	client;
+	char 		data[4];
+	char* 		toSend;
+	NCData**	ncData;
+	NCProtocol*	ncp;
+	
+	//client = TCPClient_Create ( "192.168.130.24", 5533 );
+	client = TCPClient_Create ( getLocalIP(), 5533 );
+	ncData = ( NCData** ) malloc ( sizeof ( struct sNCData* ) * 2 );
+	ncData[0] = NCData_Create ( sizeof ( server->IPAddress ), server->IPAddress );
+	memcpy ( data, &server->Port, 4 );
+	ncData[1] = NCData_Create ( sizeof ( data ), data );
+	if ( TCPClient_Connect ( client ) == 0 )
+		return;
+
+	ncp = NCProtocol_Create ( CMD_SERVER_REQ_NODE_START, 2, ncData );
+	toSend = NCProtocol_Encapsul ( ncp );
+
+	TCPClient_Send ( client, toSend, ncp->totalLength );
+
+	TCPClient_Close ( client );
 }
