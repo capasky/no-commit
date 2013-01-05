@@ -8,7 +8,8 @@ main.o: main.c collection.o
 
 # client
 client: client.o ncclient.o
-		gcc -o client client.o ncclient.o command.o TCPClient.o stringutils.o protocol.o
+		gcc -o client client.o ncclient.o command.o TCPClient.o stringutils.o protocol.o\
+		updater.o servernode.o
 		@printf '****************************************\n'
 		@printf '* Build 完成！							 \n'
 		@printf '****************************************\n'
@@ -24,15 +25,34 @@ server: server.o TCPServer.o TCPListener.o protocol.o api/inet/inetdef.h\
 		collection.o dbapi.o convert.o command.o servercmd.o stringutils.o
 		gcc -o server server.o TCPListener.o TCPServer.o protocol.o api/inet/inetdef.h\
 		 collection.o dbapi.o convert.o command.o servercmd.o stringutils.o -ltokyocabinet
+		@printf '****************************************\n'
+		@printf '* Build 完成！							 \n'
+		@printf '****************************************\n'
 
 server.o: server.c
 		gcc -c server.c
 
 command.o: command.c stringutils.o 
 		gcc -c command.c
+#masterserver
+masterserver: server.o TCPServer.o TCPListener.o protocol.o api/inet/inetdef.h\
+		collection.o dbapi.o convert.o command.o servercmd.o stringutils.o
+		gcc -o server server.o TCPListener.o TCPServer.o protocol.o api/inet/inetdef.h\
+		 collection.o dbapi.o convert.o command.o servercmd.o stringutils.o -ltokyocabinet
+		@printf '****************************************\n'
+		@printf '* Build 完成！							 \n'
+		@printf '****************************************\n'
+
 #api
 servercmd.o : api/servercmd.c protocol.o command.o
 		gcc -c api/servercmd.c
+
+#api.core
+updater.o: api/core/updater.c command.o protocol.o servernode.o
+		gcc -c api/core/updater.c 
+
+servernode.o: api/core/servernode.c api/inet/inetdef.h
+		gcc -c api/core/servernode.c
 
 #api.data
 collection.o: api/data/collection.c dbapi.o convert.o 
