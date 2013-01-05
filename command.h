@@ -29,18 +29,18 @@
 #define CMD_SET_ID						4			/* 设置数据 */
 #define CMD_DEL_ID						5			/* 删除数据 */
 #define CMD_QUIT_ID						6			/* 退出命令 */
-#define CMD_MESSAGE_ID					999			/*  */
+#define CMD_MESSAGE_ID					9			/*  */
 
-#define	CMD_CLIENT_REQ_NODE_LIST		1000		/* 客户端请求数据服务器节点列表命令 */
-#define	CMD_CLIENT_REQ_NODE_CHANGE		1001		/* 客户端查询Master服务器是否需要更新服务器列表命令 */
+#define	CMD_CLIENT_REQ_NODE_LIST		10		/* 客户端请求数据服务器节点列表命令 */
+#define	CMD_CLIENT_REQ_NODE_CHANGE		11		/* 客户端查询Master服务器是否需要更新服务器列表命令 */
 
-#define	CMD_SERVER_REQ_NODE_PEND		2000		/* Master服务器查询数据服务器节点状态命令 */
-#define CMD_SERVER_REP_NODE_LIST		2001		/* Master服务器向客户端返回服务器列表命令 */
-#define CMD_SERVER_REP_NODE_KEEP		2002		/* Master服务器向客户端返回服务器状态保持命令 */
+#define	CMD_SERVER_REQ_NODE_PEND		20		/* Master服务器查询数据服务器节点状态命令 */
+#define CMD_SERVER_REP_NODE_LIST		21		/* Master服务器向客户端返回服务器列表命令 */
+#define CMD_SERVER_REP_NODE_KEEP		22		/* Master服务器向客户端返回服务器状态保持命令 */
 
-#define CMD_SERVER_REQ_NODE_START		2010		/* 节点服务器启动命令 */
-#define CMD_SERVER_REQ_NODE_CLOSE		2011		/* 节点服务器关闭命令 */
-#define CMD_SERVER_REP_NODE_ALIVE		2012		/* 节点服务器回复Master服务器本节点为活动命令 */
+#define CMD_SERVER_REQ_NODE_START		30		/* 节点服务器启动命令 */
+#define CMD_SERVER_REQ_NODE_CLOSE		31		/* 节点服务器关闭命令 */
+#define CMD_SERVER_REP_NODE_ALIVE		32		/* 节点服务器回复Master服务器本节点为活动命令 */
 
 #define CMD_OPEN        	"open"
 #define CMD_CLOSE       	"close"
