@@ -49,7 +49,7 @@ ServerNode * ServerNode_Create(int id, char * name, char * ip, int port,
 	
 	sn = (ServerNode *)malloc(sizeof(struct sServerNode));
 	sn->ID = id;
-	sn->State = SERVER_NODE_STATE_NULL;
+	sn->NodeState = SERVER_NODE_STATE_NULL;
 	sn->Port = port;
 	
 	if (strlen(name) > MAX_SERVER_NAME_LEN - 1)
@@ -58,6 +58,10 @@ ServerNode * ServerNode_Create(int id, char * name, char * ip, int port,
 	}
 	strcpy(sn->Name, name);
 	strcpy(sn->IPAddress, ip);
+	sn->DataCount = dataCount;
+	sn->UpdateTag = updateTag;
+	sn->StartKey = start;
+	sn->EndKey = end;
 	return sn;
 }
 

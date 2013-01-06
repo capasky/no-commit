@@ -30,7 +30,6 @@
 
 typedef struct sUpdater
 {
-	int				State;
 	ServerNode *	ServerList[MAX_SERVER_NODE];
 	ServerNode *	DefaultNode;
 	int				NodeCount;
@@ -116,5 +115,13 @@ bool Updater_DeleteNode(Updater * updater, int id);
  * @return 成功则返回获取到的服务器节点对象指针，否则返回NULL
  */
 ServerNode * Updater_GetServer(Updater * updater, int node);
+
+/**
+ * Updater_GetServer 获取特定数据服务器节点对象
+ * @param updater Updater对象指针
+ * @param node 数据键值
+ * @return 成功则返回获取到的服务器节点对象指针，否则返回NULL
+ */
+ServerNode * Updater_GetNextServer(Updater * updater, int node);
 
 #endif

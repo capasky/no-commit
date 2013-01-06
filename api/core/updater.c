@@ -38,7 +38,6 @@ Updater * Updater_Create(char * updateServer, int port)
 {
 	int i;
 	Updater * updater = (Updater *)malloc(sizeof(struct sUpdater));
-	updater->State = 0;
 	for (i = 0; i < MAX_SERVER_NODE; i++)
 	{
 		updater->ServerList[i] = NULL;
@@ -172,17 +171,16 @@ bool Updater_UpdateServer(Updater * updater)
 	ncp = NCProtocol_Parse(buf);
 	if (ncp != NULL)
 	{
-		printf("收到消息编号：%d\n", ncp->command);
 		/* 如果服务器返回的为数据节点信息的列表，则更新 */
 		if (ncp->command == CMD_SERVER_REP_NODE_LIST)
 		{
-			memcpy(&(updater->Version), ncp->dataChunk[i]->data, sizeof(int));
-			printf("列表Verion:%d\n", updater->Version);
-			printf("更新服务器列表:\n");
+			memcpy(&(updater->Version), ncp->dataChunk[0]->data, sizeof(int));
+			printf("\nVersion:%d\n", updater->Version);
 			for (i = 1; i < ncp->chunkCount; i++)
 			{
 				node = ServerNode_Parse(ncp->dataChunk[i]->data);
-				printf("服务器%2d: %s\n", i, node->Name);
+				printf("ServerID: %d\n", node->ID);
+				printf("服务器%2d: %s:%d, %d --> %d \n", i, node->IPAddress, node->Port, node->StartKey, node->EndKey);
 				result &= Updater_UpdateNode(updater, node);
 			}
 			updater->DefaultNode = updater->ServerList[0];
@@ -207,17 +205,17 @@ bool Updater_Clean(Updater * updater)
 	for (i = 0; i < updater->NodeCount; i++)
 	{
 		/* 对于已更新的节点，设置节点状态为正常 */
-		if (updater->ServerList[i]->State == SERVER_NODE_STATE_UPDATED)
+		if (updater->ServerList[i]->NodeState == SERVER_NODE_STATE_UPDATED)
 		{
-			updater->ServerList[i]->State = SERVER_NODE_STATE_NORMAL;
+			updater->ServerList[i]->NodeState = SERVER_NODE_STATE_NORMAL;
 		}
 		/* 对于未更新的节点，设置节点状态为已删除，在下一次清理时会被清理里掉 */
-		if (updater->ServerList[i]->State == SERVER_NODE_STATE_NORMAL)
+		if (updater->ServerList[i]->NodeState == SERVER_NODE_STATE_NORMAL)
 		{
-			updater->ServerList[i]->State = SERVER_NODE_STATE_DELETED;
+			updater->ServerList[i]->NodeState = SERVER_NODE_STATE_DELETED;
 		}
 		/* 对于标记为已删除的节点，将其删除 */
-		if (updater->ServerList[i]->State == SERVER_NODE_STATE_DELETED)
+		if (updater->ServerList[i]->NodeState == SERVER_NODE_STATE_DELETED)
 		{
 			Updater_DeleteNode(updater, updater->ServerList[i]->ID);
 		}
@@ -228,36 +226,23 @@ bool Updater_Clean(Updater * updater)
 /**
  * Updater_FindNode 查找特定ID的服务器节点信息是否存在服务器列表中
  * @param updater Updater对象指针
- * @param id 要查找的节点ID
+ * @param key 要查找的节点ID
  * @param index 输出参数，若找到则为找到元素的下标，否则为插入位置
  * @return 查找到则返回true,否则返回false
  */
-bool Updater_FindNode(Updater * updater, int id, int * index)
+bool Updater_FindNode(Updater * updater, int key, int * index)
 {
-	int low = 0, high = updater->NodeCount - 1, mid;
-	do
+	int i = 0;
+	for (i = 0; i < updater->NodeCount; i++)
 	{
-		mid = (low + high) >> 1;
-		if (updater->ServerList[mid]->ID > id)
+		if (updater->ServerList[i]->StartKey == key)
 		{
-			high = mid - 1;
+			*index = i;
+			return true;
 		}
-		else
-		{
-			low = mid + 1;
-		}
-	}while (updater->ServerList[mid]->ID != id && low < high);
-
-	if (updater->ServerList[mid]->ID == id)
-	{
-		*index = mid;
-		return true;
 	}
-	else
-	{
-		*index = high;
-		return false;
-	}
+	*index = i;
+	return false;
 }
 
 /**
@@ -271,7 +256,7 @@ bool Updater_UpdateNode(Updater * updater, ServerNode * node)
 	int index;
 	int i;
 	ServerNode * tmp = NULL;
-	if (Updater_FindNode(updater, node->ID, &index))
+	if (Updater_FindNode(updater, node->StartKey, &index))
 	{
 		tmp = updater->ServerList[index];
 		/* 如果服务器的版本高于本地服务器节点信息的版本，则更新 */
@@ -288,20 +273,30 @@ bool Updater_UpdateNode(Updater * updater, ServerNode * node)
 			tmp->EndKey = node->EndKey;
 			*/
 		}
-		tmp->State = SERVER_NODE_STATE_UPDATED;
+		tmp->NodeState = SERVER_NODE_STATE_UPDATED;
 		free(node);
 		return true;
 	}
 	/* 如果未找到，则该节点为新增节点，将其插入服务器列表 */
-	else if (updater->NodeCount < MAX_SERVER_NODE)
+	else
 	{
-		for (i = updater->NodeCount - 1; i > index ; i--)
+		if (updater->NodeCount < MAX_SERVER_NODE)
 		{
-			updater->ServerList[i + 1] = updater->ServerList[i];			
+			updater->ServerList[index] = ServerNode_Create(
+								node->ID,
+								node->Name,
+								node->IPAddress,
+								node->Port,
+								node->DataCount,
+								node->UpdateTag,
+								node->StartKey,
+								node->EndKey);
+			free(node);
+			updater->ServerList[index]->NodeState = SERVER_NODE_STATE_UPDATED;
+			updater->NodeCount++;
+			printf("添加服务器:%s:%d, %d --> %d \n", updater->ServerList[index]->IPAddress, updater->ServerList[index]->Port, updater->ServerList[index]->StartKey, updater->ServerList[index]->EndKey);
+			return true;
 		}
-		updater->ServerList[index] = node;
-		updater->ServerList[index]->State = SERVER_NODE_STATE_UPDATED;
-		return true;
 	}
 	return false;
 }
@@ -353,10 +348,34 @@ ServerNode * Updater_GetServer(Updater * updater, int node)
 	int i;
 	for (i = 0; i < updater->NodeCount; i++)
 	{
-		if (updater->ServerList[i]->StartKey >= node &&
-			updater->ServerList[i]->EndKey <=node)
+		if (node >= updater->ServerList[i]->StartKey &&
+			node < updater->ServerList[i]->EndKey)
 		{
 			return updater->ServerList[i];
+		}
+	}
+	return NULL;
+}
+
+/**
+ * Updater_GetServer 获取特定数据服务器节点对象
+ * @param updater Updater对象指针
+ * @param node 数据键值
+ * @return 成功则返回获取到的服务器节点对象指针，否则返回NULL
+ */
+ServerNode * Updater_GetNextServer(Updater * updater, int node)
+{
+
+	int i;
+	for (i = 0; i < updater->NodeCount; i++)
+	{
+		if (node >= updater->ServerList[i]->StartKey &&
+			node < updater->ServerList[i]->EndKey)
+		{
+			if (updater->ServerList[(i + 1) % updater->NodeCount] != NULL)
+			{
+				return updater->ServerList[(i + 1) % updater->NodeCount];
+			}
 		}
 	}
 	return NULL;

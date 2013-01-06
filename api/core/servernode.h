@@ -35,7 +35,7 @@
 typedef struct sServerNode
 {
 	int 	ID;
-	int		State;
+	int		NodeState;
 	char 	Name[MAX_SERVER_NAME_LEN];
 	char 	IPAddress[INET_IPADDR_STRING_LEN];
 	int		Port;
@@ -74,4 +74,10 @@ bool ServerNode_Dispose(ServerNode * sn);
  */
 ServerNode * ServerNode_Parse(char * data);
 
+/**
+ * ServerNode_ToByte 将ServerNode对象转换为字节序列
+ * @param node ServerNode对象指针
+ * @return 返回转换后字节序列的指针
+ */
+char * ServerNode_ToByte(ServerNode * node);
 #endif

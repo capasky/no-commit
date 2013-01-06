@@ -95,18 +95,7 @@ void NCClient_SelectServer(NCClient * ncc)
 		}
 		else
 		{
-			//ncc->CurrentServer = Updater_GetServer( ncc->ServerUpdater, node );
-			for (i = 0; i < ncc->ServerUpdater->NodeCount; i++)
-			{
-				printf("Key:%d\n", node);
-				printf("Search from %d to %d\n", ncc->ServerUpdater->ServerList[i]->StartKey, ncc->ServerUpdater->ServerList[i]->EndKey);
-				if (node >= ncc->ServerUpdater->ServerList[i]->StartKey &&
-					node < ncc->ServerUpdater->ServerList[i]->EndKey)
-				{
-					ncc->CurrentServer = ncc->ServerUpdater->ServerList[i];
-					break;
-				}
-			}
+			ncc->CurrentServer = Updater_GetServer( ncc->ServerUpdater, node );
 		}
 	}
 	if (ncc->CurrentServer == NULL)
@@ -488,6 +477,7 @@ void CloseCommandHandler(NCClient * ncc)
 void GetCommandHandler(NCClient * ncc)
 {
 	int i;
+	char recBuf[256];
 	NCProtocol * ncp;
 	ServerNode * node = NULL;
 	NCClient_SelectServer(ncc);
@@ -521,11 +511,13 @@ void GetCommandHandler(NCClient * ncc)
 	}
 	else if (ncp->command == CMD_SERVER_REP_SUCCESS)
 	{
-		printf("获取数据成功，位于服务器：%s\n数据：%s\n", ncc->CurrentServer->IPAddress, ncp->dataChunk[0]->data);
+		memcpy(recBuf, ncp->dataChunk[0]->data, ncp->dataChunk[0]->length);
+		recBuf[ncp->dataChunk[0]->length + 1] = 0;
+		printf("获取数据成功，位于服务器：%s\n数据：%s\n", ncc->CurrentServer->IPAddress, recBuf);
 		/* 如果重新选择过服务器，表明需要进行一致性维护，将当前获取到的数据同步到之前的服务器 */
 		if (ncc->ReSelect)
 		{
-			ncc->CurrentCommand->Value = strdup(ncp->dataChunk[0]->data);
+			ncc->CurrentCommand->Value = strdup(recBuf);
 			i = pthread_create(&(ncc->ConsistThread), NULL, &NCClient_ConsistProcess, (void *)ncc);
 			if (i != 0)
 			{
