@@ -198,7 +198,7 @@ void* tFunction ( void* pparam )
 	else
 		ncp = NCProtocol_Create ( CMD_SERVER_REP_FAILED, 1, ncData );
 	buf = NCProtocol_Encapsul ( ncp );
-	if ( TCPServer_Send ( param->sockfd, buf ) > 0 )
+	if ( TCPServer_SendL ( param->sockfd, buf, ncp->totalLength ) > 0 )
 	{
 		printf ( "\n回复 %s : %d -> %s\n", 
 				( char* ) inet_ntoa ( param->server->clientaddr.sin_addr ), 

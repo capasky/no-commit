@@ -108,6 +108,7 @@ int main ( int arg, char** argv )
 			{
 				fprintf ( stderr, "线程创建失败,%s:%d\n", __FILE__, __LINE__ );
 			}
+			sleep ( 1 );
 		}
 	}
 	TCPServer_Close ( tcpServer );
@@ -288,6 +289,7 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 			
 			rNode = ( DataNode* ) malloc ( sizeof ( DataNode ));
 			rNode->node.ID = ( servAmount + 1 ) % 65536;
+			strcpy ( rNode->node.Name, "nocommit" );
 			strcpy ( rNode->node.IPAddress, protocol->dataChunk[0]->data );
 			rNode->node.Port = tmpv ;
 			rNode->node.DataCount = 0;
