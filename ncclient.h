@@ -34,7 +34,7 @@
 
 #include "api/utils/stringutils.h"
 
-#define IP_ADDR_SERVER  	"192.168.130.34"
+#define IP_ADDR_SERVER  	"192.168.1.29"
 #define IP_PORT_SERVER  	5533
 
 #define IP_ADDR_CLIENT		"127.0.0.1"
@@ -48,11 +48,15 @@ typedef struct sNCClient
 	TCPClient * 	Client;
 	Updater *		ServerUpdater;
 	ServerNode *	CurrentServer;
+	ServerNode * 	PrevNode;
 	Command *		CurrentCommand;
 	bool			CommandValid;
 	NCProtocol* 	CurrentNCP;
+	bool			ReSelect;
+	bool			QuitFlag;
 	pthread_mutex_t	UpdaterMutex;
 	pthread_t		UpdaterThread;
+	pthread_t		ConsistThread;
 } NCClient;
 
 
@@ -89,29 +93,16 @@ void NCClient_CheckCommand(NCClient * ncc);
 void NCClient_Run(NCClient * ncc);
 
 /**
- * NCClient_Preprocess 客户端预处理
- * @param ncc NCClient对象指针
- * @param cmdString 命令字符串
- */
-void NCClient_Preprocess(NCClient * ncc, string cmdString);
-
-/**
  * NCClient_PrepareData 客户端准备数据
  * @param ncc NCClient对象指针
  */
 void NCClient_PrepareData(NCClient * ncc);
 
 /**
- * NCClient_Execute 客户端执行
- * @param ncc NCClient对象指针
- */
-void NCClient_Execute(NCClient * ncc);
-
-/**
  * NCClient_ExecRemote 执行远程命令
  * @param ncc NCClient对象指针
  */
-void NCClient_ExecRemote(NCClient * ncc);
+NCProtocol * NCClient_ExecRemote(NCClient * ncc);
 
 /**
  * NCClient_Clean 客户端清理
@@ -124,5 +115,24 @@ void NCClient_Clean(NCClient * ncc);
  * @return 执行结束返回
  */
 void * NCClient_Updater(void * ncc);
+
+/**
+ * NCClient_ConsistProcess 一致性维护线程处理函数
+ * @param ncc
+ * @return 执行结束返回
+ */
+void * NCClient_ConsistProcess(void * ncc);
+
+void OpenCommandHandler(NCClient * ncc);
+
+void CloseCommandHandler(NCClient * ncc);
+
+void GetCommandHandler(NCClient * ncc);
+
+void SetCommandHandler(NCClient * ncc);
+
+void DeleteCommandHandler(NCClient * ncc);
+
+void QuitCommandHandler(NCClient * ncc);
 
 #endif
