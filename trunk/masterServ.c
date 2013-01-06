@@ -218,7 +218,7 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 	DataNode*	sNode = NULL;
 	DataNode*	rNode = NULL;
 	char		data[4];
-	int			i, tmpv;
+	int			i, tmpv, id, datacnt;
 	char* 		retMsg = ( char* ) malloc ( MAX_BUF_SIZE * sizeof ( char ));
 	memset ( retMsg, 0, MAX_BUF_SIZE );
 	
@@ -318,6 +318,25 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 				}
 			};
 			servAmount = ( servAmount + 1 ) % 1024;
+			version = ( version + 1 ) % 1024;
+			break;
+		case CMD_SERVER_REP_NODE_ALIVE:
+			memcpy ( &tmpv, protocol->dataChunk[1]->data, 4 );
+			memcpy ( &datacnt, protocol->dataChunk[2]->data, 4 );
+			printf ( "数据服务器信息更新:IP:%s Port:%d", 
+					protocol->dataChunk[0]->data, tmpv );
+			pNode = servNodes;
+			while ( pNode )
+			{
+				if ( strcpy ( pNode->node.IPAddress, protocol->dataChunk[0]->data) >= 0 &&
+						pNode->node.Port == tmpv )
+				{
+					pNode->node.DataCount = datacnt;
+					printf ( "  cnt:%d\n", datacnt );
+					break;
+				}
+				pNode = pNode->next;
+			}
 			version = ( version + 1 ) % 1024;
 			break;
 		defalut:

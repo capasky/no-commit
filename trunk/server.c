@@ -46,8 +46,9 @@ typedef struct PARAM
 
 int excuteCMD ( NCProtocol *protocol, char** retMsg );
 void* tFunction ( void* pparam );
-void* sFunction ( );
-char* GetLocalIp(); 
+void* sFunction ();
+void* suFunction ( void* server );
+char* GetLocalIp (); 
 void conMaster ( TCPServer* server );
 Collection* cltion;
 
@@ -87,6 +88,12 @@ int main ( int arg, char** argv )
 		fprintf ( stderr, "服务器线程创建失败! %s:%d\n", __FILE__, __LINE__ );
 	}
 
+	/* 增加线程向服务器更新信息 */
+	if ( pthread_create ( &stid, NULL, suFunction, ( void* )tcpServer ) != 0 )
+	{
+		fprintf ( stderr, "服务器更新线程创建失败！ %s:%d\n", __FILE__, __LINE__ );
+	}
+
 	while ( 1 )
 	{
 		int newfd = TCPServer_Accept ( tcpServer );
@@ -110,6 +117,44 @@ int main ( int arg, char** argv )
 	TCPServer_Close ( tcpServer );
 
 	return 0;
+}
+
+void* suFunction ( void* vserver )
+{
+	TCPServer* server = ( TCPServer* )vserver;
+	int tmp = 0;
+
+	while ( 1 )
+	{ 
+		TCPClient* 	client;
+		char 		data[4];
+		char* 		toSend;
+		NCData**	ncData;
+		NCProtocol*	ncp;
+		
+		client = TCPClient_Create ( "192.168.1.47", 5533 );
+		//client = TCPClient_Create ( getLocalIP(), 5533 );
+		ncData = ( NCData** ) malloc ( sizeof ( struct sNCData* ) * 3 );
+		ncData[0] = NCData_Create ( sizeof ( server->IPAddress ), server->IPAddress );
+		memcpy ( data, &server->Port, 4 );
+		ncData[1] = NCData_Create ( sizeof ( data ), data );
+		if ( cltion != NULL )
+			memcpy ( data, &cltion->dataCount, 4 );
+		else
+			memcpy ( data, &tmp, 4 );
+
+		ncData[2] = NCData_Create ( sizeof ( data ), data );
+		if ( TCPClient_Connect ( client ) == 0 )
+			return;
+
+		ncp = NCProtocol_Create ( CMD_SERVER_REP_NODE_ALIVE, 3, ncData );
+		toSend = NCProtocol_Encapsul ( ncp );
+
+		TCPClient_Send ( client, toSend, ncp->totalLength );
+
+		TCPClient_Close ( client );
+		sleep ( 10 );
+	}
 }
 
 void* tFunction ( void* pparam )
