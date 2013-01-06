@@ -42,6 +42,7 @@ typedef struct sCollection
     int     errorCode;
     int     dbState;
     int     itemCount;
+	int 	dataCount;
 } Collection;
 
 /**

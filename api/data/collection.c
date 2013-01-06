@@ -17,6 +17,7 @@
  * capasky				2012.12.07			1.0.0.1
  * yellhb				2012.12.16			1.0.1.0
  * yellhb				2012.12.22			1.0.2.1
+ * yellhb				2013.1.6			1.0.2.2
  */
  
 #include <tcutil.h>
@@ -37,6 +38,7 @@ Collection * Collection_Create ( char * dbFile )
 	Collection * container = (Collection *)
 								malloc ( sizeof ( struct sCollection ));
     container->itemCount = 0;
+	container->dataCount = 0;
     container->dbFile = strdup(dbFile);
 	container->db = createDB();
 
@@ -103,6 +105,7 @@ int Collection_AddStr ( Collection * container, char * key, char * value )
 		return DB_ERR;
 	}
 
+	(container->dataCount)++;
 	return DB_OK;
 }
 
@@ -132,6 +135,7 @@ int Collection_RemoveStr ( Collection * container, char * key )
     if ( !tchdbout2 ( container->db, key ))
         return DB_ERR;
 
+	(container->dataCount)--;
     return DB_OK;
 }
 
@@ -160,6 +164,7 @@ int Collection_AddInt ( Collection * container, int key, char * value )
 		return DB_ERR;
 	}
 
+	(container->dataCount)++;
 	return DB_OK;
 }
 
@@ -189,6 +194,7 @@ int Collection_RemoveInt ( Collection * container, int key )
     if ( !tchdbout2 ( container->db, Convert_IntToString ( key )))
         return DB_ERR;
 
+	(container->dataCount)--;
     return DB_OK;
 }
 
