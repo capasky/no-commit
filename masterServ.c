@@ -176,9 +176,16 @@ void* sFunction ( )
 					if ( rNode != NULL || ( rNode == NULL && pNode->next != NULL ))
 					{
 						if ( rNode != NULL )
+						{
 							rNode->next = pNode->next;
+							rNode->node.EndKey = pNode->node.EndKey;
+						}
 						else
+						{
 							servNodes = pNode->next;
+							servNodes->node.StartKey = 0;
+							servNodes->node.EndKey = 0x7FFFFFFF - 1;
+						}
 						dNode = pNode;
 						pNode = pNode->next;
 						free ( dNode );
@@ -189,6 +196,8 @@ void* sFunction ( )
 						servNodes = NULL;
 						pNode = NULL;
 					}
+					servAmount--;
+					version = ( version + 1 ) % 1024;
 				}	
 				else
 				{
@@ -245,6 +254,7 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 				ncp = NCProtocol_Create ( CMD_SERVER_REP_NODE_KEEP, 0, NULL );
 				retMsg = NCProtocol_Encapsul ( ncp );
 				sendLen = ncp->totalLength;
+				printf ( "sendlen:%d\n", sendLen );
 				return retMsg;
 			}
 			else
@@ -253,8 +263,9 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 			i = 0;
 			while ( pNode )
 			{
-				ncData[++i] = NCData_Create ( sizeof ( ServerNode ), (char*)&pNode->node );
+				ncData[++i] = NCData_Create ( sizeof ( ServerNode ), ServerNode_ToByte ( &pNode->node ));
 				pNode = pNode->next;
+				printf ( "i=%d\n", i );
 			}
 			ncp = NCProtocol_Create ( CMD_SERVER_REP_NODE_LIST,
 					servAmount + 1, ncData );
@@ -339,12 +350,12 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 				}
 				pNode = pNode->next;
 			}
-			version = ( version + 1 ) % 1024;
 			break;
 		defalut:
 			retMsg = NULL;
 	}
 	
+	printf ( "version:%d\n", version );
 	return retMsg;
 }
 
