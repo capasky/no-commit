@@ -47,7 +47,7 @@ typedef struct PARAM
 int excuteCMD ( NCProtocol *protocol, char** retMsg );
 void* tFunction ( void* pparam );
 void* sFunction ( );
-char* getLocalIP ( );
+char* GetLocalIp(); 
 void conMaster ( TCPServer* server );
 Collection* cltion;
 
@@ -60,7 +60,7 @@ int main ( int arg, char** argv )
 	char*		servIP;
 
 	cltion = NULL;
-	servIP = getLocalIP();
+	servIP = GetLocalIp();
 	tcpServer =  TCPServer_Create ( servIP, rand() % 50000 + 1024 );
 	
 	while ( TCPServer_Bind ( tcpServer ) == -1 )
@@ -283,35 +283,35 @@ int excuteCMD ( NCProtocol *protocol, char** retMsg )
 	return flag;
 }
 
-char* getLocalIP()
-{
-	char* ip = NULL;
-	int fd, interface, retn = 0;
-	struct ifreq buf[8];
-	struct ifconf ifc;
+char* GetLocalIp()  
+{        
+    int MAXINTERFACES = 16;  
+    char *ip = NULL;
+    int fd, intrface, retn = 0;    
+    struct ifreq buf[MAXINTERFACES];    
+    struct ifconf ifc;    
 
-	if (( fd = socket ( AF_INET, SOCK_STREAM, 0 )) >= 0 )
-	{
-		ifc.ifc_len = sizeof ( buf );
-		ifc.ifc_buf = (caddr_t)buf;
-		if ( !ioctl ( fd, SIOCGIFCONF, (char*)&ifc ))
-		{
-			interface = ifc.ifc_len / sizeof ( struct ifreq );
+    if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) >= 0)    
+    {    
+        ifc.ifc_len = sizeof(buf);    
+        ifc.ifc_buf = (caddr_t)buf;    
+        if (!ioctl(fd, SIOCGIFCONF, (char *)&ifc))    
+        {    
+            intrface = ifc.ifc_len / sizeof(struct ifreq);    
 
-			while ( interface-- > 0 )
-			{
-				if ( !ioctl ( fd, SIOCGIFCONF, (char*)&buf[interface] ))
-				{
-					ip = inet_ntoa (((struct sockaddr_in*)(&buf[interface].ifr_addr))->sin_addr );
-					break;
-				}
-			}
-		}
-		close ( fd );
-	}
-
-	return ip;
-}
+            while (intrface-- > 0)    
+            {    
+                if (!(ioctl (fd, SIOCGIFADDR, (char *) &buf[intrface])))    
+                {    
+                    ip=(inet_ntoa(((struct sockaddr_in*)(&buf[intrface].ifr_addr))->sin_addr));    
+                    break;  
+                }                        
+            }  
+        }    
+        close (fd);    
+        return ip;    
+    }  
+} 
 
 void conMaster ( TCPServer* server )
 {
@@ -321,8 +321,8 @@ void conMaster ( TCPServer* server )
 	NCData**	ncData;
 	NCProtocol*	ncp;
 	
-	//client = TCPClient_Create ( "192.168.130.24", 5533 );
-	client = TCPClient_Create ( getLocalIP(), 5533 );
+	client = TCPClient_Create ( "192.168.1.47", 5533 );
+	//client = TCPClient_Create ( getLocalIP(), 5533 );
 	ncData = ( NCData** ) malloc ( sizeof ( struct sNCData* ) * 2 );
 	ncData[0] = NCData_Create ( sizeof ( server->IPAddress ), server->IPAddress );
 	memcpy ( data, &server->Port, 4 );

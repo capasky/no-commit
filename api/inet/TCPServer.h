@@ -89,6 +89,15 @@ char * TCPServer_Recv ( SOCKET sockfd );
 int TCPServer_Send ( SOCKET sockfd, char * sendBuf );
 
 /**
+  * TCPServer_SendL 向客户端发送反馈消息
+  * @param sockfd
+  * @param 待发送的消息序列
+  * @param 发送字节数
+  * @return 返回发送的字节总数
+  */
+int TCPServer_SendL ( SOCKET sockfd, char* sendBuf, int length );
+
+/**
   * TCPServer_Listen 使server到socket处于被动监听状态，并设置消息队列
   * @param TCPServer指针
   * @return 返回设置是否成功 -1为失败，0为成功
