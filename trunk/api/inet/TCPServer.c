@@ -15,6 +15,7 @@
  * @author              @date               @version
  * yellhb               2012.12.19          1.0.0.1
  * yellhb				2012.12.20			1.0.1.0
+ * yellhb				2013.1.6			1.0.1.1
  */
 
 #include <arpa/inet.h>
@@ -136,13 +137,25 @@ char * TCPServer_Recv ( SOCKET sockfd )
 /**
   * TCPServer_Send 向客户端发送反馈消息
   * @param sockfd
-  * @param 待发送到消息序列
-  * @return 返回发送到字节总数
+  * @param 待发送的消息序列
+  * @return 返回发送的字节总数
   */
-int TCPServer_Send ( SOCKET sockfd, char * sendBuf )
+int TCPServer_Send ( SOCKET sockfd, char* sendBuf )
 {
 	return send ( sockfd, sendBuf, strlen ( sendBuf ), 0 );
 }	
+
+/**
+  * TCPServer_SendL 向客户端发送反馈消息
+  * @param sockfd
+  * @param 待发送的消息序列
+  * @param 发送字节数
+  * @return 返回发送的字节总数
+  */
+int TCPServer_SendL ( SOCKET sockfd, char* sendBuf, int length )
+{
+	return send ( sockfd, sendBuf, length, 0 );
+}
 
 /**
   * TCPServer_Listen 使server到socket处于被动监听状态，并设置消息队列

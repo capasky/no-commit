@@ -49,10 +49,11 @@ typedef struct PARAM
 char* excuteCMD ( NCProtocol *protocol, TCPServer* server );
 void* tFunction ( void* pparam );
 void* sFunction ();
-char* getLocalIP ();
+char* GetLocalIp();  
 int			version = 0;
 int 		servAmount = 0;
 DataNode*	servNodes;
+int 		sendLen;
 
 int main ( int arg, char** argv )
 {
@@ -62,7 +63,8 @@ int main ( int arg, char** argv )
 	Param*		param;
 	char*		servIP;
 
-	servIP = getLocalIP();
+	servIP = GetLocalIp();
+	printf ( "%s\n", servIP );
 	tcpServer =  TCPServer_Create ( servIP, 5533 );
 	
 	if ( TCPServer_Bind ( tcpServer ) == -1 )
@@ -135,7 +137,7 @@ void* tFunction ( void* pparam )
 		return NULL;
 
 	memset ( sbuf, 0, MAX_BUF_SIZE );
-	strcpy ( sbuf, excuteCMD ( param->ncprotocol, param->server ));
+	memcpy ( sbuf, excuteCMD ( param->ncprotocol, param->server ), sendLen );
 
 	if ( sbuf == NULL )
 	{
@@ -143,7 +145,7 @@ void* tFunction ( void* pparam )
 		return NULL;
 	}
 
-	if ( TCPServer_Send ( param->sockfd, sbuf ) > 0 )
+	if ( TCPServer_SendL ( param->sockfd, sbuf, sendLen ) > 0 )
 	{
 		printf ( "\n回复 %s : %d\n", 
 				( char* ) inet_ntoa ( param->server->clientaddr.sin_addr ), 
@@ -227,7 +229,10 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 			memcpy ( &tmpv, protocol->dataChunk[0]->data, 4 );
 			if ( tmpv == version )
 			{
-				return NULL;
+				ncp = NCProtocol_Create ( CMD_SERVER_REP_NODE_KEEP, 0, NULL );
+				retMsg = NCProtocol_Encapsul ( ncp );
+				sendLen = ncp->totalLength;
+				return retMsg;
 			}
 
 			ncData = ( NCData** ) malloc ( sizeof ( struct sNCData* ) * ( servAmount + 1 ));
@@ -235,7 +240,12 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 			ncData[0] = NCData_Create ( sizeof ( int ), data );
 			
 			if ( servNodes == NULL )
-				return NULL;
+			{
+				ncp = NCProtocol_Create ( CMD_SERVER_REP_NODE_KEEP, 0, NULL );
+				retMsg = NCProtocol_Encapsul ( ncp );
+				sendLen = ncp->totalLength;
+				return retMsg;
+			}
 			else
 				pNode = servNodes;
 
@@ -248,6 +258,7 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 			ncp = NCProtocol_Create ( CMD_SERVER_REP_NODE_LIST,
 					servAmount + 1, ncData );
 			retMsg = NCProtocol_Encapsul ( ncp );
+			sendLen = ncp->totalLength;
 			break;
 		case CMD_SERVER_REQ_NODE_START:
 			memcpy ( &tmpv, protocol->dataChunk[1]->data, 4 );
@@ -307,6 +318,7 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 				}
 			};
 			servAmount = ( servAmount + 1 ) % 1024;
+			version = ( version + 1 ) % 1024;
 			break;
 		defalut:
 			retMsg = NULL;
@@ -315,32 +327,32 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 	return retMsg;
 }
 
-char* getLocalIP()
-{
-	char* ip = NULL;
-	int fd, interface, retn = 0;
-	struct ifreq buf[8];
-	struct ifconf ifc;
+char* GetLocalIp()  
+{        
+    int MAXINTERFACES = 16;  
+    char *ip = NULL;
+    int fd, intrface, retn = 0;    
+    struct ifreq buf[MAXINTERFACES];    
+    struct ifconf ifc;    
 
-	if (( fd = socket ( AF_INET, SOCK_STREAM, 0 )) >= 0 )
-	{
-		ifc.ifc_len = sizeof ( buf );
-		ifc.ifc_buf = (caddr_t)buf;
-		if ( !ioctl ( fd, SIOCGIFCONF, (char*)&ifc ))
-		{
-			interface = ifc.ifc_len / sizeof ( struct ifreq );
+    if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) >= 0)    
+    {    
+        ifc.ifc_len = sizeof(buf);    
+        ifc.ifc_buf = (caddr_t)buf;    
+        if (!ioctl(fd, SIOCGIFCONF, (char *)&ifc))    
+        {    
+            intrface = ifc.ifc_len / sizeof(struct ifreq);    
 
-			while ( interface-- > 0 )
-			{
-				if ( !ioctl ( fd, SIOCGIFCONF, (char*)&buf[interface] ))
-				{
-					ip = inet_ntoa (((struct sockaddr_in*)(&buf[interface].ifr_addr))->sin_addr );
-					break;
-				}
-			}
-		}
-		close ( fd );
-	}
-
-	return ip;
-}
+            while (intrface-- > 0)    
+            {    
+                if (!(ioctl (fd, SIOCGIFADDR, (char *) &buf[intrface])))    
+                {    
+                    ip=(inet_ntoa(((struct sockaddr_in*)(&buf[intrface].ifr_addr))->sin_addr));    
+                    break;  
+                }                        
+            }  
+        }    
+        close (fd);    
+        return ip;    
+    }  
+} 
