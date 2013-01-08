@@ -13,6 +13,7 @@
  * Revision Log:
  * @author              @date               @version
  * yellhb               2013.1.5          	1.0.0.0
+ * yellhb				2013.1.8			1.0.0.1
  */
 
 #include <stdio.h>
@@ -64,7 +65,6 @@ int main ( int arg, char** argv )
 	char*		servIP;
 
 	servIP = GetLocalIp();
-	printf ( "%s\n", servIP );
 	tcpServer =  TCPServer_Create ( servIP, 5533 );
 	
 	if ( TCPServer_Bind ( tcpServer ) == -1 )
@@ -79,6 +79,7 @@ int main ( int arg, char** argv )
 	TCPServer_Listen ( tcpServer );
 	servNodes = NULL;
 
+	printf ( "当前服务器IP:%s\n", servIP );
 	printf ( "====================================================================\n" );
 	printf ( "=            节点配置服务器初始化完成，开始监听...                 =\n" );
 	printf ( "====================================================================\n" );
@@ -106,6 +107,7 @@ int main ( int arg, char** argv )
 			param->sNodes = servNodes;
 			if ( pthread_create ( &tid, NULL, tFunction, ( void* )param ) != 0 )
 			{
+				free ( param );
 				fprintf ( stderr, "线程创建失败,%s:%d\n", __FILE__, __LINE__ );
 			}
 			sleep ( 1 );
@@ -113,6 +115,9 @@ int main ( int arg, char** argv )
 	}
 	TCPServer_Close ( tcpServer );
 
+	free ( tcpServer );
+	free ( servIP );
+	free ( servNodes );
 	return 0;
 }
 
@@ -133,6 +138,7 @@ void* tFunction ( void* pparam )
 				ntohs ( param->server->clientaddr.sin_port ), 
 				param->ncprotocol->command, 
 				param->ncprotocol->chunkCount );
+		//free ( buf );
 	}
 	else
 		return NULL;
@@ -153,6 +159,8 @@ void* tFunction ( void* pparam )
 				ntohs ( param->server->clientaddr.sin_port ));
 	}
 	TCPServer_SockClose ( param->sockfd );
+	//free ( param );
+	pthread_detach ( pthread_self() );
 }
 
 void* sFunction ( )
@@ -242,7 +250,7 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 				ncp = NCProtocol_Create ( CMD_SERVER_REP_NODE_KEEP, 0, NULL );
 				retMsg = NCProtocol_Encapsul ( ncp );
 				sendLen = ncp->totalLength;
-				return retMsg;
+				break;
 			}
 
 			ncData = ( NCData** ) malloc ( sizeof ( struct sNCData* ) * ( servAmount + 1 ));
@@ -255,17 +263,15 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 				retMsg = NCProtocol_Encapsul ( ncp );
 				sendLen = ncp->totalLength;
 				printf ( "sendlen:%d\n", sendLen );
-				return retMsg;
+				break;
 			}
 			else
 				pNode = servNodes;
 
-			i = 0;
 			while ( pNode )
 			{
 				ncData[++i] = NCData_Create ( sizeof ( ServerNode ), ServerNode_ToByte ( &pNode->node ));
 				pNode = pNode->next;
-				printf ( "i=%d\n", i );
 			}
 			ncp = NCProtocol_Create ( CMD_SERVER_REP_NODE_LIST,
 					servAmount + 1, ncData );
@@ -277,9 +283,7 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 			printf ( "新服务器加入列表:ID:%d IP:%s Port:%d\n", 
 					servAmount + 1, protocol->dataChunk[0]->data, tmpv );
 			if ( servNodes == NULL )
-			{
 				sNode = NULL;
-			}
 			else
 			{
 				pNode = servNodes;
@@ -289,9 +293,8 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 				while ( pNode != NULL )
 				{
 					if ( pNode->node.DataCount > sNode->node.DataCount )
-					{
 						sNode = rNode;
-					}
+
 					if ( rNode != servNodes )
 						rNode = pNode;
 					pNode = pNode->next;
@@ -345,7 +348,6 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 						pNode->node.Port == tmpv )
 				{
 					pNode->node.DataCount = datacnt;
-					printf ( "  cnt:%d\n", datacnt );
 					break;
 				}
 				pNode = pNode->next;
@@ -356,6 +358,8 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 	}
 	
 	printf ( "version:%d\n", version );
+	//free ( ncData );
+	//free ( ncp );
 	return retMsg;
 }
 
