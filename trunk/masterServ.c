@@ -14,6 +14,7 @@
  * @author              @date               @version
  * yellhb               2013.1.5          	1.0.0.0
  * yellhb				2013.1.8			1.0.0.1
+ * yellhb				2013.1.11			1.0.0.2
  */
 
 #include <stdio.h>
@@ -159,7 +160,8 @@ void* tFunction ( void* pparam )
 				ntohs ( param->server->clientaddr.sin_port ));
 	}
 	TCPServer_SockClose ( param->sockfd );
-	//free ( param );
+	NCProtocol_Dispose ( param->ncprotocol );
+	free ( param );
 	pthread_detach ( pthread_self() );
 }
 
@@ -270,7 +272,7 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 
 			while ( pNode )
 			{
-				ncData[++i] = NCData_Create ( sizeof ( ServerNode ), ServerNode_ToByte ( &pNode->node ));
+				ncData[++i] = NCData_Create ( sizeof ( pNode->node ), ServerNode_ToByte ( &pNode->node ));
 				pNode = pNode->next;
 			}
 			ncp = NCProtocol_Create ( CMD_SERVER_REP_NODE_LIST,
@@ -358,8 +360,6 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 	}
 	
 	printf ( "version:%d\n", version );
-	//free ( ncData );
-	//free ( ncp );
 	return retMsg;
 }
 
