@@ -116,6 +116,9 @@ int main ( int arg, char** argv )
 	}
 	TCPServer_Close ( tcpServer );
 
+	free ( tcpServer );
+	free ( servIP );
+	free ( cltion );
 	return 0;
 }
 
@@ -206,6 +209,8 @@ void* tFunction ( void* pparam )
 				sbuf );
 	}
 	TCPServer_SockClose ( param->sockfd );
+	NCProtocol_Dispose ( param->ncprotocol );
+	free ( param );
 	pthread_detach ( pthread_self() );
 }
 
