@@ -40,22 +40,25 @@
 ServerNode * ServerNode_Create(int id, char * name, char * ip, int port,
 					int dataCount, int updateTag, int start, int end)
 {
+	int i;
 	ServerNode * sn = NULL;
 	
-	if (strlen(ip) > MAX_SERVER_NAME_LEN - 1)
-	{
-		return sn;
-	}
-	
 	sn = (ServerNode *)malloc(sizeof(struct sServerNode));
-	sn->ID = id;
-	sn->NodeState = SERVER_NODE_STATE_NULL;
-	sn->Port = port;
-	
 	if (strlen(name) > MAX_SERVER_NAME_LEN - 1)
 	{
-		name[MAX_SERVER_NAME_LEN] = '\0';
+		name[MAX_SERVER_NAME_LEN - 1] = '\0';
 	}
+	for (i = 0; i < MAX_SERVER_NAME_LEN; i++)
+	{
+		sn->Name[i] = 0;
+	}
+	ip[INET_IPADDR_STRING_LEN - 1] = 0;
+	for (i = 0; i < INET_IPADDR_STRING_LEN; i++)
+	{
+		sn->IPAddress[i] = 0;
+	}
+	sn->ID = id;
+	sn->Port = port;
 	strcpy(sn->Name, name);
 	strcpy(sn->IPAddress, ip);
 	sn->DataCount = dataCount;
@@ -76,6 +79,7 @@ bool ServerNode_Dispose(ServerNode * sn)
 	if (sn != NULL)
 	{
 		free(sn);
+		sn = NULL;
 		return true;
 	}
 	return false;	
@@ -88,19 +92,27 @@ bool ServerNode_Dispose(ServerNode * sn)
  */
 ServerNode * ServerNode_Parse(char * data)
 {
-	int 	id;
-	char 	name[MAX_SERVER_NAME_LEN];
-	char 	ip[INET_IPADDR_STRING_LEN];
-	int 	port;
-	int 	dataCount;
-	int 	updateTag;
-	int 	start;
-	int 	end;
-
 	ServerNode * sn = (ServerNode *)malloc(sizeof(struct sServerNode));
-
+	/*
+	memcpy(&(sn->ID), data, sizeof(int));
+	data += sizeof(int);
+	strcpy(sn->Name, data);
+	data += MAX_SERVER_NAME_LEN;
+	strcpy(sn->IPAddress, data);
+	data += INET_IPADDR_STRING_LEN;
+	memcpy(&(sn->Port), data, sizeof(int));
+	data += sizeof(int);
+	memcpy(&(sn->DataCount), data, sizeof(int));
+	data += sizeof(int);
+	memcpy(&(sn->UpdateTag), data, sizeof(int));
+	data += sizeof(int);
+	memcpy(&(sn->StartKey), data, sizeof(int));
+	data += sizeof(int);
+	memcpy(&(sn->EndKey), data, sizeof(int));
+	data += sizeof(int);
+	memcpy(&(sn->NodeState), data, sizeof(int));
+	*/
 	memcpy(sn, data, sizeof(struct sServerNode));
-
 	return sn;
 }
 

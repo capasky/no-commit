@@ -34,7 +34,7 @@
 
 #include "api/utils/stringutils.h"
 
-#define IP_ADDR_SERVER  	"192.168.1.29"
+#define IP_ADDR_SERVER  	"192.168.130.34"
 #define IP_PORT_SERVER  	5533
 
 #define IP_ADDR_CLIENT		"127.0.0.1"
@@ -50,6 +50,7 @@ typedef struct sNCClient
 	ServerNode *	CurrentServer;
 	ServerNode * 	PrevNode;
 	Command *		CurrentCommand;
+	Command *		ConsistCommand;
 	bool			CommandValid;
 	NCProtocol* 	CurrentNCP;
 	bool			ReSelect;
