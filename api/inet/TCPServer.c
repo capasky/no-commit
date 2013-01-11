@@ -16,6 +16,7 @@
  * yellhb               2012.12.19          1.0.0.1
  * yellhb				2012.12.20			1.0.1.0
  * yellhb				2013.1.6			1.0.1.1
+ * yellhb				2013.1.11			1.0.1.2
  */
 
 #include <arpa/inet.h>
@@ -65,7 +66,7 @@ TCPServer * TCPServer_Create ( char *ipAddress, int port )
 		fprintf ( stderr, "fcntl(sock,SETFL,opts) ERROR, %s:%d", __FILE__, __LINE__ );
 	}
 	event.data.fd = tcpServer->sockfd;
-	event.events = EPOLLIN;
+	event.events = EPOLLIN|EPOLLET;
 	epoll_ctl ( tcpServer->epollfd, EPOLL_CTL_ADD, tcpServer->sockfd, &event );
 
 	return tcpServer;
@@ -188,7 +189,7 @@ SOCKET TCPServer_Accept ( TCPServer *tcpServer )
 				fprintf ( stderr, "Accept ERROR, %s:%d", __FILE__, __LINE__ );
 			}
 			event.data.fd = newfd;
-			event.events = EPOLLIN;
+			event.events = EPOLLIN|EPOLLET;
 			epoll_ctl ( tcpServer->epollfd, EPOLL_CTL_ADD, newfd, &event );
 		}
 		else 

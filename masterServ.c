@@ -271,11 +271,8 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 			i = 0;
 			while ( pNode )
 			{
-				printf ( "-----------------------\n " );
 				ncData[++i] = NCData_Create ( sizeof ( ServerNode ), ServerNode_ToByte ( &(pNode->node )));
-				printf ( "--=--=-=-=-=-=-=-=-=-=-\n" );
 				pNode = pNode->next;
-				printf ( "========================\n" );
 			}
 			ncp = NCProtocol_Create ( CMD_SERVER_REP_NODE_LIST,
 					servAmount + 1, ncData );

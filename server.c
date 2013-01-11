@@ -171,7 +171,6 @@ void* tFunction ( void* pparam )
 	int 		flag;
 
 	buf = TCPServer_Recv ( param->sockfd );
-			
 	if ( buf != NULL )
 	{	
 		param->ncprotocol = NCProtocol_Parse ( buf );
