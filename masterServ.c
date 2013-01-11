@@ -242,7 +242,6 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 	char* 		retMsg = ( char* ) malloc ( MAX_BUF_SIZE * sizeof ( char ));
 	memset ( retMsg, 0, MAX_BUF_SIZE );
 	
-
 	switch ( protocol->command )
 	{
 		case CMD_CLIENT_REQ_NODE_LIST:
@@ -254,7 +253,6 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 				sendLen = ncp->totalLength;
 				break;
 			}
-
 			ncData = ( NCData** ) malloc ( sizeof ( struct sNCData* ) * ( servAmount + 1 ));
 			memcpy ( data, &(version), sizeof ( data ));
 			ncData[0] = NCData_Create ( sizeof ( int ), data );
@@ -269,11 +267,15 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 			}
 			else
 				pNode = servNodes;
-
+		
+			i = 0;
 			while ( pNode )
 			{
-				ncData[++i] = NCData_Create ( sizeof ( pNode->node ), ServerNode_ToByte ( &pNode->node ));
+				printf ( "-----------------------\n " );
+				ncData[++i] = NCData_Create ( sizeof ( ServerNode ), ServerNode_ToByte ( &(pNode->node )));
+				printf ( "--=--=-=-=-=-=-=-=-=-=-\n" );
 				pNode = pNode->next;
+				printf ( "========================\n" );
 			}
 			ncp = NCProtocol_Create ( CMD_SERVER_REP_NODE_LIST,
 					servAmount + 1, ncData );
