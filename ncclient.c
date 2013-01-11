@@ -54,6 +54,7 @@ NCClient * NCClient_Create()
 		ncc->PrevNode		= NULL;
 		ncc->ServerUpdater	= NULL;
 		ncc->CurrentCommand = NULL;
+		ncc->ConsistCommand = NULL;
 		ncc->CurrentNCP		= NULL;
 		ncc->ReSelect		= false;
 		ncc->QuitFlag		= false;
@@ -186,8 +187,7 @@ void NCClient_Run(NCClient * ncc)
 		}
 		if (ncc->Active)
 		{
-			printf("%s::%s>>",
-				ncc->CurrentServer->Name, ncc->DBFile);
+			printf("NoCommit::%s>>", ncc->DBFile);
 		}
 		else
 		{
@@ -198,7 +198,6 @@ void NCClient_Run(NCClient * ncc)
 		{
 			break;
 		}
-		
 	}
 	
 	return;
@@ -208,10 +207,7 @@ void NCClient_PrepareData(NCClient * ncc)
 {
 	NCData ** 	ncData;
 	int 		count = 0;
-	if(ncc->CurrentNCP != NULL)
-	{
-		return;
-	}
+
 	if (ncc->CurrentCommand == NULL || ncc->CurrentCommand->CommandID == CMD_QUIT_ID)
 	{
 		return;
@@ -221,11 +217,11 @@ void NCClient_PrepareData(NCClient * ncc)
 	
 	if (ncc->CurrentCommand->Key != NULL)
 	{
-		ncData[0] = NCData_Create(strlen(ncc->CurrentCommand->Key), ncc->CurrentCommand->Key);
+		ncData[0] = NCData_Create(strlen(ncc->CurrentCommand->Key) + 1, ncc->CurrentCommand->Key);
 		count++;
 		if (ncc->CurrentCommand->Value != NULL)
 		{
-			ncData[1] = NCData_Create(strlen(ncc->CurrentCommand->Value), ncc->CurrentCommand->Value);
+			ncData[1] = NCData_Create(strlen(ncc->CurrentCommand->Value) + 1, ncc->CurrentCommand->Value);
 			count++;
 		}
 		else
@@ -273,15 +269,15 @@ NCProtocol * NCClient_ExecRemote(NCClient * ncc)
 	data = NCProtocol_Encapsul(ncc->CurrentNCP);
 	//发送
 	TCPClient_Send( ncc->Client, data, ncc->CurrentNCP->totalLength );
-	free(data);
 	//接受服务器回复
 	mlen = TCPClient_Receive( ncc->Client, buffer, sizeof(buffer) );
 	printf("接收数据长度:%d\n", mlen);
-	buffer[mlen] = 0;
+	buffer[mlen + 1] = 0;
 
 	TCPClient_Close(ncc->Client);
 	
-	ncp = NCProtocol_Parse(&buffer[0]);
+	ncp = NCProtocol_Parse(buffer);
+	free(data);
 	return ncp;
 }
 
@@ -292,9 +288,12 @@ NCProtocol * NCClient_ExecRemote(NCClient * ncc)
 void NCClient_Clean(NCClient * ncc)
 {
 	fflush(stdin);
-	NCProtocol_Dispose(ncc->CurrentNCP);
-	ncc->CurrentNCP = NULL;
-	if (ncc->PrevNode)
+	if (ncc->CurrentNCP != NULL)
+	{
+		NCProtocol_Dispose(ncc->CurrentNCP);
+	}
+	
+	if (ncc->PrevNode != NULL)
 	{
 		ServerNode_Dispose(ncc->PrevNode);
 	}
@@ -310,16 +309,14 @@ void * NCClient_Updater(void * ncc)
 {
 	int i, j, k;
 	NCClient * nc = (NCClient *)(ncc);
-	Updater * updater = Updater_Create(
-				IP_ADDR_SERVER,
-				IP_PORT_SERVER);
+	Updater * updater = Updater_Create(IP_ADDR_SERVER, IP_PORT_SERVER);
 	nc->ServerUpdater = updater;
 	while (1)
 	{
 		pthread_mutex_lock(&(nc->UpdaterMutex));
 		Updater_UpdateServer(updater);
 		pthread_mutex_unlock(&(nc->UpdaterMutex));
-		sleep(10);
+		sleep(6);
 		
 	}
 	
@@ -334,28 +331,28 @@ void * NCClient_Updater(void * ncc)
  */
 void * NCClient_ConsistProcess(void * ncc)
 {
-	NCClient * nc = (NCClient *)(ncc);
-	NCProtocol * ncp = NULL;
-	int mlen = 0;
-	char buffer[1024];
-	char * data;
+	NCClient * 	nc = (NCClient *)(ncc);
+	NCProtocol*	ncp = NULL;
+	int 		mlen = 0;
+	char 		buffer[1024];
+	char * 		data;
 	NCData ** 	ncData;
 	int 		count = 0;
 
-	if (nc->CurrentCommand == NULL || nc->CurrentCommand->CommandID == CMD_QUIT_ID)
+	if (nc->ConsistCommand == NULL)
 	{
 		return NULL;
 	}
 
 	ncData = (NCData **)malloc( sizeof( struct sNCData *) * 2);
 	
-	if (nc->CurrentCommand->Key != NULL)
+	if (nc->ConsistCommand->Key != NULL)
 	{
-		ncData[0] = NCData_Create(strlen(nc->CurrentCommand->Key), nc->CurrentCommand->Key);
+		ncData[0] = NCData_Create(strlen(nc->ConsistCommand->Key), nc->ConsistCommand->Key);
 		count++;
-		if (nc->CurrentCommand->Value != NULL)
+		if (nc->ConsistCommand->Value != NULL)
 		{
-			ncData[1] = NCData_Create(strlen(nc->CurrentCommand->Value), nc->CurrentCommand->Value);
+			ncData[1] = NCData_Create(strlen(nc->ConsistCommand->Value), nc->ConsistCommand->Value);
 			count++;
 		}
 		else
@@ -385,10 +382,7 @@ void * NCClient_ConsistProcess(void * ncc)
 		fprintf(stderr, "TCP连接出错，错误代码：%d\n", 1);
 		return NULL;
 	}
-	ncp = NCProtocol_Create(
-				CMD_SET_ID,
-				2,
-				ncData);
+	ncp = NCProtocol_Create(CMD_SET_ID, 2, ncData);
 	
 	//封装数据
 	data = NCProtocol_Encapsul(ncp);
@@ -398,13 +392,13 @@ void * NCClient_ConsistProcess(void * ncc)
 	mlen = TCPClient_Receive( nc->Client, buffer, sizeof(buffer) );
 	
 	buffer[mlen] = 0;
-	//printf("服务器：%s\n", buffer);
-	//printf("*************************************************\n");
 
 	free(data);
 	NCProtocol_Dispose(ncp);
 	TCPClient_Close(nc->Client);
-	
+	free(nc->ConsistCommand);
+	nc->ConsistCommand = NULL;
+	pthread_detach(pthread_self());
 	return NULL;
 }
 
@@ -415,23 +409,19 @@ void OpenCommandHandler(NCClient * ncc)
 	NCProtocol * ncp;
 	for (i = 0; i < ncc->ServerUpdater->NodeCount; i++)
 	{
-		printf("NodeCount:%d\n", ncc->ServerUpdater->NodeCount);
-		//if (ncc->ServerUpdater->ServerList[i]->NodeState == SERVER_NODE_STATE_UPDATED)
-		//{
-			ncc->CurrentServer = ncc->ServerUpdater->ServerList[i];
+		ncc->CurrentServer = ncc->ServerUpdater->ServerList[i];
 
-			ncp = NCClient_ExecRemote(ncc);
-			if (ncp->command == CMD_SERVER_REP_SUCCESS)
-			{
-				printf("打开数据库成功，位于服务器：%s\n", ncc->CurrentServer->Name);
-			}
-			else
-			{
-				printf("打开数据库失败，位于服务器：%s\n", ncc->CurrentServer->Name);
-				result = false;
-			}
-			NCProtocol_Dispose(ncp);
-		//}
+		ncp = NCClient_ExecRemote(ncc);
+		if (ncp->command == CMD_SERVER_REP_SUCCESS)
+		{
+			printf("打开数据库成功，位于服务器：%s\n", ncc->CurrentServer->Name);
+		}
+		else
+		{
+			printf("打开数据库失败，位于服务器：%s\n", ncc->CurrentServer->Name);
+			result = false;
+		}
+		NCProtocol_Dispose(ncp);
 	}
 	if (result)
 	{
@@ -446,30 +436,22 @@ void CloseCommandHandler(NCClient * ncc)
 {
 	
 	int i;
-	bool result = true;
 	NCProtocol * ncp;
 	for (i = 0; i < ncc->ServerUpdater->NodeCount; i++)
 	{
-		//if (ncc->ServerUpdater->ServerList[i]->NodeState == SERVER_NODE_STATE_UPDATED)
-		//{
-			ncc->CurrentServer = ncc->ServerUpdater->ServerList[i];
-			ncp = NCClient_ExecRemote(ncc);
-			if (ncp->command == CMD_SERVER_REP_SUCCESS)
-			{
-				printf("关闭数据库成功，位于服务器：%s\n", ncc->CurrentServer->Name);
-			}
-			else
-			{
-				printf("关闭数据库失败，位于服务器：%s\n", ncc->CurrentServer->Name);
-				result = false;
-			}
-			NCProtocol_Dispose(ncp);
-		//}
+		ncc->CurrentServer = ncc->ServerUpdater->ServerList[i];
+		ncp = NCClient_ExecRemote(ncc);
+		if (ncp->command == CMD_SERVER_REP_SUCCESS)
+		{
+			printf("关闭数据库成功，位于服务器：%s\n", ncc->CurrentServer->Name);
+		}
+		else
+		{
+			printf("关闭数据库失败，位于服务器：%s\n", ncc->CurrentServer->Name);
+		}
+		NCProtocol_Dispose(ncp);
 	}
-	if (result)
-	{
-		ncc->Active = false;
-	}
+	ncc->Active = false;
 
 	return;
 }
@@ -477,7 +459,6 @@ void CloseCommandHandler(NCClient * ncc)
 void GetCommandHandler(NCClient * ncc)
 {
 	int i;
-	char recBuf[256];
 	NCProtocol * ncp;
 	ServerNode * node = NULL;
 	NCClient_SelectServer(ncc);
@@ -491,11 +472,22 @@ void GetCommandHandler(NCClient * ncc)
 		pthread_mutex_lock(&(ncc->UpdaterMutex));
 		Updater_UpdateServer(ncc->ServerUpdater);
 		pthread_mutex_unlock(&(ncc->UpdaterMutex));
-		GetCommandHandler(ncc);
+		if (ncc->ServerUpdater->NodeCount < 1)
+		{
+			printf("所有服务器已下线，无法操作！\n");
+		}
+		else
+		{
+			GetCommandHandler(ncc);
+			if (ncp != NULL)
+			{
+				NCProtocol_Dispose(ncp);
+			}
+			return;
+		}
 	}
 	/* 获取数据失败，并且不是第二次选择服务器，表明选择的服务器为新增节点，需要向后查找一次服务器并重新获取数据 */
-	else if (ncp->command == CMD_SERVER_REP_FAILED &&
-			ncc->ReSelect == false)
+	else if (ncp->command == CMD_SERVER_REP_FAILED && ncc->ReSelect == false)
 	{
 		ncc->ReSelect = true;
 		ncc->PrevNode = ServerNode_Create(
@@ -507,35 +499,45 @@ void GetCommandHandler(NCClient * ncc)
 				ncc->CurrentServer->UpdateTag,
 				ncc->CurrentServer->StartKey,
 				ncc->CurrentServer->EndKey);
-		GetCommandHandler(ncc);
-	}
-	else if (ncp->command == CMD_SERVER_REP_SUCCESS)
-	{
-		memcpy(recBuf, ncp->dataChunk[0]->data, ncp->dataChunk[0]->length);
-		recBuf[ncp->dataChunk[0]->length + 1] = 0;
-		printf("获取数据成功，位于服务器：%s\n数据：%s\n", ncc->CurrentServer->IPAddress, recBuf);
-		/* 如果重新选择过服务器，表明需要进行一致性维护，将当前获取到的数据同步到之前的服务器 */
-		if (ncc->ReSelect)
+		NCProtocol_Dispose(ncp);
+		ncp = NULL;
+		NCClient_SelectServer(ncc);
+		ncp = NCClient_ExecRemote(ncc);
+		if (ncp != NULL && ncp->command == CMD_SERVER_REP_SUCCESS)
 		{
-			ncc->CurrentCommand->Value = strdup(recBuf);
+			printf("获取数据成功，位于服务器：%s\n数据：%s\n", ncc->CurrentServer->IPAddress, ncp->dataChunk[0]->data);
+			if (ncc->ConsistCommand == NULL)
+			{
+				ncc->ConsistCommand = Command_Create(CMD_SET_ID, CMD_SET, ncc->CurrentCommand->Key, ncp->dataChunk[0]->data);
+			}
 			i = pthread_create(&(ncc->ConsistThread), NULL, &NCClient_ConsistProcess, (void *)ncc);
 			if (i != 0)
 			{
 				fprintf ( stderr, "线程创建失败,%s:%d\n", __FILE__, __LINE__ );
 			}
+			sleep(2);
 		}
-		sleep(2);
+		/* 向后查找一次之后未发现数据，说明此数据不存在 */
+		else
+		{
+			printf("获取数据失败，位于服务器：%s\n", ncc->CurrentServer->IPAddress);
+			printf("键值为 %s 的数据不存在！\n", ncc->CurrentCommand->Key);
+		}
+		if (ncp != NULL)
+		{
+			NCProtocol_Dispose(ncp);
+		}
+		return;
 	}
-	else
+	else if (ncp->command == CMD_SERVER_REP_SUCCESS && ncc->ReSelect == false)
 	{
-		printf("获取数据失败，位于服务器：%s\n", ncc->CurrentServer->IPAddress);
+		printf("获取数据成功，位于服务器：%s\n数据：%s\n", ncc->CurrentServer->IPAddress, ncp->dataChunk[0]->data);
+		if (ncp != NULL)
+		{
+			NCProtocol_Dispose(ncp);
+		}
+		return;
 	}
-	if (ncp != NULL)
-	{
-		NCProtocol_Dispose(ncp);
-	}
-
-	return;
 }
 
 void SetCommandHandler(NCClient * ncc)
@@ -551,7 +553,11 @@ void SetCommandHandler(NCClient * ncc)
 	{
 		printf("更新或插入数据失败，位于服务器：%s\n", ncc->CurrentServer->IPAddress);
 	}
-	NCProtocol_Dispose(ncp);
+	if (ncp != NULL)
+	{
+		NCProtocol_Dispose(ncp);
+	}
+
 
 	return;
 }
@@ -569,7 +575,10 @@ void DeleteCommandHandler(NCClient * ncc)
 	{
 		printf("删除数据失败，位于服务器：%s\n", ncc->CurrentServer->IPAddress);
 	}
-	NCProtocol_Dispose(ncp);
+	if (ncp != NULL)
+	{
+		NCProtocol_Dispose(ncp);
+	}
 
 	return;
 }

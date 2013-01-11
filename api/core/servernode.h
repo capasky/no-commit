@@ -35,7 +35,6 @@
 typedef struct sServerNode
 {
 	int 	ID;
-	int		NodeState;
 	char 	Name[MAX_SERVER_NAME_LEN];
 	char 	IPAddress[INET_IPADDR_STRING_LEN];
 	int		Port;

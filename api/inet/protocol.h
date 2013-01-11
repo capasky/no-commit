@@ -82,9 +82,17 @@ NCProtocol * NCProtocol_Create( int         command,
 bool NCProtocol_Dispose(NCProtocol * ncp);
 
 /**
- * NCProtocol_Parse 将数据解析为协议结构对象
+ * NCProtocol_AddData 向NCProtocol协议对象中添加数据块
+ * @param ncp 协议结构体对象指针
  * @param data 数据指针
  * @param length 数据的长度
+ * @return 成功返回true，否则返回false。
+ */
+bool NCProtocol_AddData(NCProtocol * ncp, char * data, int length);
+
+/**
+ * NCProtocol_Parse 将数据解析为协议结构对象
+ * @param data 数据指针
  * @return 成功则返回解析的 NCProtocol 结构体对象指针，否则返回NULL
  */
 NCProtocol * NCProtocol_Parse(char * data);

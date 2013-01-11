@@ -136,28 +136,25 @@ bool Updater_UpdateServer(Updater * updater)
 {
 	char 		data[4];
 	char *		toSend;
-	char		buf[1024];
+	char		buf[1024] = { 0 };
 	NCProtocol*	ncp;
 	NCData ** 	ncData;
 	bool		result = true;
 	int 		i;
+	int			count = 0;
 	ServerNode * node;
 	ncData = (NCData **)malloc( sizeof( struct sNCData *) * 1);
-	memcpy(data, &(updater->Version), sizeof(data));
+	memcpy(data, &(updater->Version), sizeof(int));
 	ncData[0] = NCData_Create(sizeof(int), data);
-	ncp = NCProtocol_Create(
-						CMD_CLIENT_REQ_NODE_LIST,
-						1,
-						ncData);
+	ncp = NCProtocol_Create(CMD_CLIENT_REQ_NODE_LIST, 1, ncData);
 	if (updater->Client == NULL)
 	{
-		updater->Client = TCPClient_Create(
-						updater->UpdateServer,
-						updater->UpdateServerPort);
+		updater->Client = TCPClient_Create(updater->UpdateServer, updater->UpdateServerPort);
 	}
 	if ( !(TCPClient_Connect(updater->Client)) )
 	{
 		fprintf(stderr, "\nTCP连接出错，错误代码：%d\n", 1);
+		NCProtocol_Dispose(ncp);
 		return false;
 	}
 	toSend = NCProtocol_Encapsul(ncp); 	
@@ -175,22 +172,36 @@ bool Updater_UpdateServer(Updater * updater)
 		if (ncp->command == CMD_SERVER_REP_NODE_LIST)
 		{
 			memcpy(&(updater->Version), ncp->dataChunk[0]->data, sizeof(int));
+			printf("收到数据：");
 			printf("\nVersion:%d\n", updater->Version);
+			updater->NodeCount = 0;
 			for (i = 1; i < ncp->chunkCount; i++)
 			{
-				node = ServerNode_Parse(ncp->dataChunk[i]->data);
-				printf("ServerID: %d\n", node->ID);
-				printf("服务器%2d: %s:%d, %d --> %d \n", i, node->IPAddress, node->Port, node->StartKey, node->EndKey);
-				result &= Updater_UpdateNode(updater, node);
+				if (updater->ServerList[i - 1] != NULL)
+				{
+					free(updater->ServerList[i - 1]);
+				}
+				updater->ServerList[i - 1] = (ServerNode *)malloc(sizeof(struct sServerNode));
+				memcpy(updater->ServerList[i - 1], ncp->dataChunk[i]->data, ncp->dataChunk[i]->length);
+				printf("服务器%2d: %s:%d, %d --> %d \n",
+						updater->ServerList[i - 1]->ID,
+						updater->ServerList[i - 1]->IPAddress,
+						updater->ServerList[i - 1]->Port,
+						updater->ServerList[i - 1]->StartKey,
+						updater->ServerList[i - 1]->EndKey);
+				//result &= Updater_UpdateNode(updater, node);
+				updater->NodeCount++;
 			}
 			updater->DefaultNode = updater->ServerList[0];
-			result &= Updater_Clean(updater);
+			//result &= Updater_Clean(updater);
 		}
+		NCProtocol_Dispose(ncp);
 	}
 	else
 	{
 		result = false;
 	}
+	
 	return result;
 }
 
@@ -201,25 +212,6 @@ bool Updater_UpdateServer(Updater * updater)
  */
 bool Updater_Clean(Updater * updater)
 {
-	int i;
-	for (i = 0; i < updater->NodeCount; i++)
-	{
-		/* 对于已更新的节点，设置节点状态为正常 */
-		if (updater->ServerList[i]->NodeState == SERVER_NODE_STATE_UPDATED)
-		{
-			updater->ServerList[i]->NodeState = SERVER_NODE_STATE_NORMAL;
-		}
-		/* 对于未更新的节点，设置节点状态为已删除，在下一次清理时会被清理里掉 */
-		if (updater->ServerList[i]->NodeState == SERVER_NODE_STATE_NORMAL)
-		{
-			updater->ServerList[i]->NodeState = SERVER_NODE_STATE_DELETED;
-		}
-		/* 对于标记为已删除的节点，将其删除 */
-		if (updater->ServerList[i]->NodeState == SERVER_NODE_STATE_DELETED)
-		{
-			Updater_DeleteNode(updater, updater->ServerList[i]->ID);
-		}
-	}
 	return true;
 }
 
@@ -260,7 +252,7 @@ bool Updater_UpdateNode(Updater * updater, ServerNode * node)
 	{
 		tmp = updater->ServerList[index];
 		/* 如果服务器的版本高于本地服务器节点信息的版本，则更新 */
-		if (updater->ServerList[index]->UpdateTag < node->UpdateTag)
+		if (tmp != NULL && tmp->UpdateTag != node->UpdateTag)
 		{
 			memcpy(tmp, node, sizeof(struct sServerNode));
 			/*
@@ -273,7 +265,6 @@ bool Updater_UpdateNode(Updater * updater, ServerNode * node)
 			tmp->EndKey = node->EndKey;
 			*/
 		}
-		tmp->NodeState = SERVER_NODE_STATE_UPDATED;
 		free(node);
 		return true;
 	}
@@ -291,10 +282,9 @@ bool Updater_UpdateNode(Updater * updater, ServerNode * node)
 								node->UpdateTag,
 								node->StartKey,
 								node->EndKey);
-			free(node);
-			updater->ServerList[index]->NodeState = SERVER_NODE_STATE_UPDATED;
 			updater->NodeCount++;
 			printf("添加服务器:%s:%d, %d --> %d \n", updater->ServerList[index]->IPAddress, updater->ServerList[index]->Port, updater->ServerList[index]->StartKey, updater->ServerList[index]->EndKey);
+			free(node);
 			return true;
 		}
 	}
