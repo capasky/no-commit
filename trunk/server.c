@@ -135,7 +135,7 @@ void* suFunction ( void* vserver )
 		NCData**	ncData;
 		NCProtocol*	ncp;
 		
-		client = TCPClient_Create ( "192.168.1.47", 5533 );
+		client = TCPClient_Create ( "192.168.130.24", 5533 );
 		//client = TCPClient_Create ( getLocalIP(), 5533 );
 		ncData = ( NCData** ) malloc ( sizeof ( struct sNCData* ) * 3 );
 		ncData[0] = NCData_Create ( sizeof ( server->IPAddress ), server->IPAddress );
