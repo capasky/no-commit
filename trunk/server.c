@@ -36,6 +36,7 @@
 #include "command.h"
 
 #define MAX_BUF_SIZE		1024
+#define MASTERSERVER_IP		"192.168.130.24"
 
 typedef struct PARAM
 {
@@ -135,7 +136,7 @@ void* suFunction ( void* vserver )
 		NCData**	ncData;
 		NCProtocol*	ncp;
 		
-		client = TCPClient_Create ( "192.168.130.24", 5533 );
+		client = TCPClient_Create ( MASTERSERVER_IP, 5533 );
 		//client = TCPClient_Create ( getLocalIP(), 5533 );
 		ncData = ( NCData** ) malloc ( sizeof ( struct sNCData* ) * 3 );
 		ncData[0] = NCData_Create ( sizeof ( server->IPAddress ), server->IPAddress );
@@ -370,7 +371,7 @@ void conMaster ( TCPServer* server )
 	NCData**	ncData;
 	NCProtocol*	ncp;
 	
-	client = TCPClient_Create ( "192.168.130.24", 5533 );
+	client = TCPClient_Create ( MASTERSERVER_IP, 5533 );
 	//client = TCPClient_Create ( getLocalIP(), 5533 );
 	ncData = ( NCData** ) malloc ( sizeof ( struct sNCData* ) * 2 );
 	ncData[0] = NCData_Create ( sizeof ( server->IPAddress ), server->IPAddress );
