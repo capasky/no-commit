@@ -23,6 +23,9 @@
 #include <string.h>
 
 #include "../inet/inetdef.h"
+
+#include "../utils/convert.h"
+
 #include "servernode.h"
 
 /**
@@ -125,5 +128,7 @@ char * ServerNode_ToByte(ServerNode * node)
 {
 	char * data = (char *)malloc(sizeof(char) * sizeof(struct sServerNode));
 	memcpy(data, node, sizeof(struct sServerNode));
+	
+	
 	return data;
 }

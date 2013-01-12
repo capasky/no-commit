@@ -132,7 +132,7 @@ bool TCPClient_Close(TCPClient * client)
  */
 int TCPClient_Receive(TCPClient * client, char * buffer, int length)
 {
-	return recv ( client->Client, buffer, length, 0 );
+	return recv ( client->Client, buffer, length, 0 );;
 }
 
 /**

@@ -52,6 +52,8 @@ NCClient * NCClient_Create()
 		ncc->Connected 		= false;
 		ncc->Client 		= TCPClient_Create( IP_ADDR_SERVER, IP_PORT_SERVER );
 		ncc->PrevNode		= NULL;
+		memset(ncc->UpdateServerIP, 0, INET_IPADDR_STRING_LEN);
+		ncc->UpdateServerPort= 0;
 		ncc->ServerUpdater	= NULL;
 		ncc->CurrentCommand = NULL;
 		ncc->ConsistCommand = NULL;
@@ -122,7 +124,8 @@ void NCClient_CheckCommand(NCClient * ncc)
 	}
 	if (ncc->CurrentCommand->CommandID == CMD_QUIT_ID)
 	{
-		exit(0);
+		ncc->CommandValid = true;
+		return;
 	}
 	if (ncc->CurrentCommand->CommandID == CMD_OPEN_ID && ncc->Active)
 	{
@@ -185,7 +188,11 @@ void NCClient_Run(NCClient * ncc)
 					break;
 			}
 		}
-		if (ncc->Active)
+		if (ncc->QuitFlag)
+		{
+			break;
+		}
+		if (ncc->Active && ncc->DBFile[0] != 0)
 		{
 			printf("NoCommit::%s>>", ncc->DBFile);
 		}
@@ -194,10 +201,6 @@ void NCClient_Run(NCClient * ncc)
 			printf("NoCommit>>");
 		}
 		NCClient_Clean(ncc);
-		if (ncc->QuitFlag)
-		{
-			break;
-		}
 	}
 	
 	return;
@@ -207,7 +210,7 @@ void NCClient_PrepareData(NCClient * ncc)
 {
 	NCData ** 	ncData;
 	int 		count = 0;
-
+	
 	if (ncc->CurrentCommand == NULL || ncc->CurrentCommand->CommandID == CMD_QUIT_ID)
 	{
 		return;
@@ -309,12 +312,21 @@ void * NCClient_Updater(void * ncc)
 {
 	int i, j, k;
 	NCClient * nc = (NCClient *)(ncc);
-	Updater * updater = Updater_Create(IP_ADDR_SERVER, IP_PORT_SERVER);
+	Updater * updater;
+	if (nc->UpdateServerIP[0] != 0 && nc->UpdateServerPort != 0)
+	{
+		updater = Updater_Create(nc->UpdateServerIP, nc->UpdateServerPort);
+	}
+	else
+	{
+		updater = Updater_Create(IP_ADDR_SERVER, IP_PORT_SERVER);
+	}
 	nc->ServerUpdater = updater;
 	while (1)
 	{
 		pthread_mutex_lock(&(nc->UpdaterMutex));
 		Updater_UpdateServer(updater);
+		//Updater_UpdateServer(updater);
 		pthread_mutex_unlock(&(nc->UpdaterMutex));
 		sleep(6);
 		
@@ -371,11 +383,12 @@ void * NCClient_ConsistProcess(void * ncc)
 	}
 	strcpy(nc->Client->RemoteAddress, nc->PrevNode->IPAddress);
 	nc->Client->RemotePort = nc->PrevNode->Port;
+	/*
 	printf("当前连接服务器：\n服务器名：%s\n服务器IP：%s\n服务器端口：%d\n",
 				nc->PrevNode->Name,
 				nc->PrevNode->IPAddress,
 				nc->PrevNode->Port);
-				
+	*/
 	nc->Connected = TCPClient_Connect(nc->Client);
 	if ( !(nc->Connected) )
 	{
@@ -452,7 +465,7 @@ void CloseCommandHandler(NCClient * ncc)
 		NCProtocol_Dispose(ncp);
 	}
 	ncc->Active = false;
-
+	memset(ncc->DBFile, 0, 32);
 	return;
 }
 
@@ -555,10 +568,10 @@ void SetCommandHandler(NCClient * ncc)
 	}
 	if (ncp != NULL)
 	{
-		NCProtocol_Dispose(ncp);
+		free(ncp);
+		ncp = NULL;
+		//NCProtocol_Dispose(ncp);
 	}
-
-
 	return;
 }
 

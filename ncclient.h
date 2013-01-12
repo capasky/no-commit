@@ -49,6 +49,8 @@ typedef struct sNCClient
 	Updater *		ServerUpdater;
 	ServerNode *	CurrentServer;
 	ServerNode * 	PrevNode;
+	char			UpdateServerIP[INET_IPADDR_STRING_LEN];
+	int				UpdateServerPort;
 	Command *		CurrentCommand;
 	Command *		ConsistCommand;
 	bool			CommandValid;

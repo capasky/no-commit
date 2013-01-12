@@ -44,7 +44,7 @@ Updater * Updater_Create(char * updateServer, int port)
 	}
 	updater->DefaultNode = NULL;
 	updater->NodeCount = 0;
-	updater->Version = 0;
+	updater->Version = -1;
 	strcpy(updater->UpdateServer, updateServer);
 	updater->UpdateServerPort = port;
 	updater->Client = TCPClient_Create(
@@ -136,11 +136,11 @@ bool Updater_UpdateServer(Updater * updater)
 {
 	char 		data[4];
 	char *		toSend;
-	char		buf[1024] = { 0 };
+	char		buf[1000] = { 0 };
 	NCProtocol*	ncp;
 	NCData ** 	ncData;
 	bool		result = true;
-	int 		i;
+	int 		i, j;
 	int			count = 0;
 	ServerNode * node;
 	ncData = (NCData **)malloc( sizeof( struct sNCData *) * 1);
@@ -163,17 +163,16 @@ bool Updater_UpdateServer(Updater * updater)
 	NCProtocol_Dispose(ncp);
 	free(toSend);
 
-	TCPClient_Receive(updater->Client, buf, sizeof(buf));
-	
+	i = TCPClient_Receive(updater->Client, buf, sizeof(buf));
+
 	ncp = NCProtocol_Parse(buf);
+
 	if (ncp != NULL)
 	{
 		/* 如果服务器返回的为数据节点信息的列表，则更新 */
 		if (ncp->command == CMD_SERVER_REP_NODE_LIST)
 		{
 			memcpy(&(updater->Version), ncp->dataChunk[0]->data, sizeof(int));
-			printf("收到数据：");
-			printf("\nVersion:%d\n", updater->Version);
 			updater->NodeCount = 0;
 			for (i = 1; i < ncp->chunkCount; i++)
 			{
@@ -189,11 +188,10 @@ bool Updater_UpdateServer(Updater * updater)
 						updater->ServerList[i - 1]->Port,
 						updater->ServerList[i - 1]->StartKey,
 						updater->ServerList[i - 1]->EndKey);
-				//result &= Updater_UpdateNode(updater, node);
+						
 				updater->NodeCount++;
 			}
 			updater->DefaultNode = updater->ServerList[0];
-			//result &= Updater_Clean(updater);
 		}
 		NCProtocol_Dispose(ncp);
 	}
