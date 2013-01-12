@@ -17,6 +17,7 @@
  * yellhb				2012.12.21			1.0.1.2
  * yellhb				2012.12.22			1.0.1.3
  * yellhb				2013.1.5			1.0.2.1
+ * yellhb				2013.1.12			1.0.2.2
  */
 
 #include <stdio.h>
@@ -194,7 +195,7 @@ void* tFunction ( void* pparam )
 
 	flag = excuteCMD ( param->ncprotocol, &sbuf );
 	ncData = ( NCData** ) malloc ( sizeof ( struct sNCData* ));
-	ncData[0] = NCData_Create ( sizeof ( sbuf ), sbuf );
+	ncData[0] = NCData_Create ( strlen( sbuf ) + 1, sbuf );
 	
 	if ( flag == 1 )
 		ncp = NCProtocol_Create ( CMD_SERVER_REP_SUCCESS, 1, ncData );
