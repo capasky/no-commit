@@ -57,9 +57,11 @@ Collection* cltion;
 int main ( int arg, char** argv )
 {
 	TCPServer*	tcpServer;	
+	NCProtocol* sprotocol;
 	pthread_t	tid;
 	pthread_t	stid;
 	Param*		param;
+	char*		rbk;
 	char*		servIP;
 
 	cltion = NULL;
@@ -77,6 +79,11 @@ int main ( int arg, char** argv )
 	
 	conMaster ( tcpServer );
 	TCPServer_Listen ( tcpServer );
+
+	sprotocol = Server_ParseCommandToProtocol ( "open tchdb.hdb" );
+	excuteCMD ( sprotocol, &rbk );
+	free ( rbk );
+	NCProtocol_Dispose ( sprotocol );
 
 	printf ( "====================================================================\n" );
 	printf ( "=                  服务器初始化完成，开始监听...                   =\n" );
