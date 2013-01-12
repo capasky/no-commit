@@ -188,13 +188,15 @@ void* sFunction ( )
 						if ( rNode != NULL )
 						{
 							rNode->next = pNode->next;
-							rNode->node.EndKey = pNode->node.EndKey;
+							if ( rNode->next == NULL )
+								rNode->node.EndKey = 0x7FFFFFFF - 1;
+							else
+								rNode->node.EndKey = pNode->node.EndKey;
 						}
 						else
 						{
 							servNodes = pNode->next;
 							servNodes->node.StartKey = 0;
-							servNodes->node.EndKey = 0x7FFFFFFF - 1;
 						}
 						dNode = pNode;
 						pNode = pNode->next;
@@ -211,7 +213,7 @@ void* sFunction ( )
 				}	
 				else
 				{
-					printf ( "数据服务器%d： %s %d \n", pNode->node.ID, pNode->node.IPAddress, pNode->node.Port );
+					printf ( "数据服务器%d： %s %d si:%d ei:%d \n", pNode->node.ID, pNode->node.IPAddress, pNode->node.Port, pNode->node.StartKey, pNode->node.EndKey );
 					rNode = pNode;
 					pNode = pNode->next;
 				}
@@ -226,7 +228,7 @@ void* sFunction ( )
 			printf ( "数据服务器列表：暂时没有数据服务器上线           \n" );
 			printf ( "-------------------------------------------------\n" );
 		}
-		sleep ( 5 );
+		sleep ( 10 );
 	}
 }
 
@@ -237,6 +239,7 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 	DataNode*	pNode = NULL;
 	DataNode*	sNode = NULL;
 	DataNode*	rNode = NULL;
+	ServerNode	tnode;
 	char		data[4];
 	int			i, tmpv, id, datacnt;
 	char* 		retMsg = ( char* ) malloc ( MAX_BUF_SIZE * sizeof ( char ));
@@ -262,12 +265,10 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 				ncp = NCProtocol_Create ( CMD_SERVER_REP_NODE_KEEP, 0, NULL );
 				retMsg = NCProtocol_Encapsul ( ncp );
 				sendLen = ncp->totalLength;
-				printf ( "sendlen:%d\n", sendLen );
 				break;
 			}
 			else
 				pNode = servNodes;
-		
 			i = 0;
 			while ( pNode )
 			{
@@ -319,20 +320,23 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 			{
 				if ( sNode->next != NULL )
 				{
-					rNode->node.StartKey = sNode->next->node.StartKey;
-					rNode->node.EndKey = sNode->next->node.StartKey - 1;
-					sNode->next->node.StartKey = sNode->next->node.EndKey / 2;
+					rNode->node.StartKey = sNode->node.StartKey;
+					sNode->node.StartKey = sNode->node.EndKey / 2;
+					rNode->node.EndKey = sNode->node.StartKey - 1;
 					rNode->next = sNode->next;
 					sNode->next = rNode;
 				}
 				else
 				{
-					rNode->node.StartKey = sNode->node.EndKey / 2;
-					rNode->node.EndKey = 0x7FFFFFFF - 1;
-					sNode->node.EndKey = rNode->node.StartKey - 1;
+					rNode->node.StartKey = 0;
+					rNode->node.EndKey = sNode->node.EndKey / 2 - 1;
+					sNode->node.StartKey = rNode->node.EndKey + 1;
 					sNode->next = rNode;
 					rNode->next = NULL;
 				}
+				memcpy ( &tnode, &(rNode->node), sizeof ( ServerNode ));
+				memcpy ( &(rNode->node), &(sNode->node), sizeof ( ServerNode ));
+				memcpy ( &(sNode->node), &tnode, sizeof ( ServerNode ));
 			};
 			servAmount = ( servAmount + 1 ) % 1024;
 			version = ( version + 1 ) % 1024;
@@ -340,12 +344,12 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 		case CMD_SERVER_REP_NODE_ALIVE:
 			memcpy ( &tmpv, protocol->dataChunk[1]->data, 4 );
 			memcpy ( &datacnt, protocol->dataChunk[2]->data, 4 );
-			printf ( "数据服务器信息更新:IP:%s Port:%d", 
+			printf ( "数据服务器信息更新:IP:%s Port:%d\n", 
 					protocol->dataChunk[0]->data, tmpv );
 			pNode = servNodes;
 			while ( pNode )
 			{
-				if ( strcmp ( pNode->node.IPAddress, protocol->dataChunk[0]->data) >= 0 &&
+				if ( strcmp ( pNode->node.IPAddress, protocol->dataChunk[0]->data) == 0 &&
 						pNode->node.Port == tmpv )
 				{
 					pNode->node.DataCount = datacnt;
