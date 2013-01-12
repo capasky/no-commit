@@ -173,7 +173,6 @@ void NCClient_Run(NCClient * ncc)
 					break;
 				case CMD_GET_ID:
 					GetCommandHandler(ncc);
-					ncc->ReSelect = false;
 					break;
 				case CMD_SET_ID:
 					SetCommandHandler(ncc);
@@ -248,9 +247,9 @@ void NCClient_PrepareData(NCClient * ncc)
 NCProtocol * NCClient_ExecRemote(NCClient * ncc)
 {
 	int mlen = 0;
-	char buffer[1024];
+	char buffer[1024] = { 0 };
 	char * data;
-	NCProtocol * ncp;
+	
 	if (ncc->Client == NULL)
 	{
 		ncc->Client = TCPClient_Create(IP_ADDR_SERVER, IP_PORT_SERVER);
@@ -274,14 +273,11 @@ NCProtocol * NCClient_ExecRemote(NCClient * ncc)
 	TCPClient_Send( ncc->Client, data, ncc->CurrentNCP->totalLength );
 	//接受服务器回复
 	mlen = TCPClient_Receive( ncc->Client, buffer, sizeof(buffer) );
-	printf("接收数据长度:%d\n", mlen);
-	buffer[mlen + 1] = 0;
 
 	TCPClient_Close(ncc->Client);
-	
-	ncp = NCProtocol_Parse(buffer);
 	free(data);
-	return ncp;
+	
+	return NCProtocol_Parse(buffer);
 }
 
 /**
@@ -291,14 +287,17 @@ NCProtocol * NCClient_ExecRemote(NCClient * ncc)
 void NCClient_Clean(NCClient * ncc)
 {
 	fflush(stdin);
+	ncc->ReSelect = false;
 	if (ncc->CurrentNCP != NULL)
 	{
 		NCProtocol_Dispose(ncc->CurrentNCP);
+		ncc->CurrentNCP = NULL;
 	}
 	
 	if (ncc->PrevNode != NULL)
 	{
 		ServerNode_Dispose(ncc->PrevNode);
+		ncc->PrevNode = NULL;
 	}
 	
 	return;
@@ -326,10 +325,8 @@ void * NCClient_Updater(void * ncc)
 	{
 		pthread_mutex_lock(&(nc->UpdaterMutex));
 		Updater_UpdateServer(updater);
-		//Updater_UpdateServer(updater);
 		pthread_mutex_unlock(&(nc->UpdaterMutex));
 		sleep(6);
-		
 	}
 	
 	return NULL;
@@ -346,7 +343,7 @@ void * NCClient_ConsistProcess(void * ncc)
 	NCClient * 	nc = (NCClient *)(ncc);
 	NCProtocol*	ncp = NULL;
 	int 		mlen = 0;
-	char 		buffer[1024];
+	char 		buffer[1024] = { 0 };
 	char * 		data;
 	NCData ** 	ncData;
 	int 		count = 0;
@@ -383,12 +380,6 @@ void * NCClient_ConsistProcess(void * ncc)
 	}
 	strcpy(nc->Client->RemoteAddress, nc->PrevNode->IPAddress);
 	nc->Client->RemotePort = nc->PrevNode->Port;
-	/*
-	printf("当前连接服务器：\n服务器名：%s\n服务器IP：%s\n服务器端口：%d\n",
-				nc->PrevNode->Name,
-				nc->PrevNode->IPAddress,
-				nc->PrevNode->Port);
-	*/
 	nc->Connected = TCPClient_Connect(nc->Client);
 	if ( !(nc->Connected) )
 	{
@@ -401,17 +392,16 @@ void * NCClient_ConsistProcess(void * ncc)
 	data = NCProtocol_Encapsul(ncp);
 	//发送
 	TCPClient_Send( nc->Client, data, ncp->totalLength );
-	//接受服务器回复
-	mlen = TCPClient_Receive( nc->Client, buffer, sizeof(buffer) );
-	
-	buffer[mlen] = 0;
-
 	free(data);
 	NCProtocol_Dispose(ncp);
+	//接受服务器回复
+	TCPClient_Receive( nc->Client, buffer, sizeof(buffer) );
+	
 	TCPClient_Close(nc->Client);
 	free(nc->ConsistCommand);
 	nc->ConsistCommand = NULL;
 	pthread_detach(pthread_self());
+	
 	return NULL;
 }
 
@@ -568,9 +558,7 @@ void SetCommandHandler(NCClient * ncc)
 	}
 	if (ncp != NULL)
 	{
-		free(ncp);
-		ncp = NULL;
-		//NCProtocol_Dispose(ncp);
+		NCProtocol_Dispose(ncp);
 	}
 	return;
 }

@@ -182,13 +182,14 @@ bool Updater_UpdateServer(Updater * updater)
 				}
 				updater->ServerList[i - 1] = (ServerNode *)malloc(sizeof(struct sServerNode));
 				memcpy(updater->ServerList[i - 1], ncp->dataChunk[i]->data, ncp->dataChunk[i]->length);
+				/*
 				printf("服务器%2d: %s:%d, %d --> %d \n",
 						updater->ServerList[i - 1]->ID,
 						updater->ServerList[i - 1]->IPAddress,
 						updater->ServerList[i - 1]->Port,
 						updater->ServerList[i - 1]->StartKey,
 						updater->ServerList[i - 1]->EndKey);
-						
+				*/
 				updater->NodeCount++;
 			}
 			updater->DefaultNode = updater->ServerList[0];

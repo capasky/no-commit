@@ -68,6 +68,7 @@ ServerNode * ServerNode_Create(int id, char * name, char * ip, int port,
 	sn->UpdateTag = updateTag;
 	sn->StartKey = start;
 	sn->EndKey = end;
+	
 	return sn;
 }
 
@@ -85,7 +86,8 @@ bool ServerNode_Dispose(ServerNode * sn)
 		sn = NULL;
 		return true;
 	}
-	return false;	
+	
+	return false;
 }
 
 /**
@@ -96,26 +98,8 @@ bool ServerNode_Dispose(ServerNode * sn)
 ServerNode * ServerNode_Parse(char * data)
 {
 	ServerNode * sn = (ServerNode *)malloc(sizeof(struct sServerNode));
-	/*
-	memcpy(&(sn->ID), data, sizeof(int));
-	data += sizeof(int);
-	strcpy(sn->Name, data);
-	data += MAX_SERVER_NAME_LEN;
-	strcpy(sn->IPAddress, data);
-	data += INET_IPADDR_STRING_LEN;
-	memcpy(&(sn->Port), data, sizeof(int));
-	data += sizeof(int);
-	memcpy(&(sn->DataCount), data, sizeof(int));
-	data += sizeof(int);
-	memcpy(&(sn->UpdateTag), data, sizeof(int));
-	data += sizeof(int);
-	memcpy(&(sn->StartKey), data, sizeof(int));
-	data += sizeof(int);
-	memcpy(&(sn->EndKey), data, sizeof(int));
-	data += sizeof(int);
-	memcpy(&(sn->NodeState), data, sizeof(int));
-	*/
 	memcpy(sn, data, sizeof(struct sServerNode));
+	
 	return sn;
 }
 
@@ -128,7 +112,6 @@ char * ServerNode_ToByte(ServerNode * node)
 {
 	char * data = (char *)malloc(sizeof(char) * sizeof(struct sServerNode));
 	memcpy(data, node, sizeof(struct sServerNode));
-	
 	
 	return data;
 }
