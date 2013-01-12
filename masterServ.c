@@ -345,7 +345,7 @@ char * excuteCMD ( NCProtocol *protocol, TCPServer* server )
 			pNode = servNodes;
 			while ( pNode )
 			{
-				if ( strcpy ( pNode->node.IPAddress, protocol->dataChunk[0]->data) >= 0 &&
+				if ( strcmp ( pNode->node.IPAddress, protocol->dataChunk[0]->data) >= 0 &&
 						pNode->node.Port == tmpv )
 				{
 					pNode->node.DataCount = datacnt;
