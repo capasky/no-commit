@@ -145,15 +145,16 @@ void* tFunction ( void* pparam )
 		return NULL;
 
 	memset ( sbuf, 0, MAX_BUF_SIZE );
-	memcpy ( sbuf, excuteCMD ( param->ncprotocol, param->server ), sendLen );
+	buf = excuteCMD ( param->ncprotocol, param->server );
+	//memcpy ( &sbuf, excuteCMD ( param->ncprotocol, param->server ), sendLen );
 
-	if ( sbuf == NULL )
+	if ( buf == NULL )
 	{
 		TCPServer_SockClose ( param->sockfd );
 		return NULL;
 	}
 
-	if ( TCPServer_SendL ( param->sockfd, sbuf, sendLen ) > 0 )
+	if ( TCPServer_SendL ( param->sockfd, buf, sendLen ) > 0 )
 	{
 		printf ( "\n回复 %s : %d\n", 
 				( char* ) inet_ntoa ( param->server->clientaddr.sin_addr ), 
